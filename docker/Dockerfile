@@ -6,6 +6,8 @@ RUN git clone https://${ACCESS_TOKEN}:x-oauth-basic@github.com/flowlight0/talkin
 
 WORKDIR /root/talkingdata-adtracking-fraud-detection
 RUN apt-get install awscli -y
+RUN pip install --upgrade pip
+RUN pip install --upgrade awscli
 RUN pip install kaggle
 
 # setup jupyter notebook configuration
