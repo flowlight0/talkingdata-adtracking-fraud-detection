@@ -138,10 +138,9 @@ def main():
     id_mapper_file = 'data/working/id_mapping.feather'
     assert os.path.exists(id_mapper_file), "Please download {} from s3 before running this script".format(id_mapper_file)
     id_mapper = pd.read_feather(id_mapper_file)
-
+    ids_we_need = set(id_mapper['old_click_id'])
     train_data, valid_data, test_data = load_datasets(config)
-    test_data = test_data.merge(id_mapper[['old_click_id']], how='inner', left_on='click_id', right_on='old_click_id')
-    test_data.drop(['old_click_id'], axis=1, inplace=True)
+    test_data = test_data[test_data.click_id.isin(ids_we_need)]
 
     categorical_features = load_categorical_features(config)
     model: Model = models[config['model']['name']]()
@@ -188,12 +187,21 @@ def main():
                 'time': time.time() - start_time
             })
 
-    print(sum(predictions) / len(predictions))
     test_data['prediction'] = sum(predictions) / len(predictions)
-    submission = id_mapper.merge(test_data[['click_id', 'prediction']], how='inner', left_on=['old_click_id'],
-                                 right_on='click_id')[['new_click_id', 'prediction']]
+    old_click_to_prediction = {}
+    for (click_id, prediction) in zip(test_data.click_id, test_data.prediction):
+        old_click_to_prediction[click_id] = prediction
+
+    click_ids = []
+    predictions = []
+    for (new_click_id, old_click_id) in zip(id_mapper.new_click_id, id_mapper.old_click_id):
+        if old_click_id not in old_click_to_prediction:
+            continue
+        click_ids.append(new_click_id)
+        predictions.append(old_click_to_prediction[old_click_id])
+    submission = pd.DataFrame({'click_id': click_ids, '{}'.format(target_variable): predictions})
     submission_path = os.path.join(os.path.dirname(__file__), output_directory, os.path.basename(options.config) + '.submission.csv')
-    submission.rename(columns={'new_click_id': 'click_id', 'prediction': target_variable}).sort_values(by='click_id').to_csv(submission_path, index=False)
+    submission.sort_values(by='click_id').to_csv(submission_path, index=False)
     dump_json_log(options, train_results)
 
 
