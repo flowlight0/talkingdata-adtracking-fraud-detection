@@ -8,6 +8,7 @@ __pycache__/
 
 # Distribution / packaging
 .Python
+joblib
 env/
 build/
 develop-eggs/
@@ -99,3 +100,8 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+
+# files under ./data
+data/*/*.feather
+data/*/*.csv
