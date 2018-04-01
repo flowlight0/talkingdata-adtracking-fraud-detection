@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 df_test = pd.read_feather('data/input/test.feather')
 df_old_test = pd.read_feather('data/input/old_test.feather')
@@ -8,7 +9,7 @@ print(merged_table.head())
 
 sub_table = merged_table[~merged_table.click_id_y.isnull()]
 # we only need a single old click_id for a new click_id
-dictionary = {y: x for (x, y) in zip(sub_table.click_id_x, sub_table.click_id_y)}
+dictionary = {y: x for (x, y) in zip(sub_table.click_id_x, sub_table.click_id_y.astype(np.uint32))}
 
 old_click_ids = []
 new_click_ids = []
