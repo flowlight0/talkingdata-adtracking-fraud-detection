@@ -21,7 +21,9 @@ feature_map = {
     'ip': features.basic.Ip,
     'app': features.basic.App,
     'os': features.basic.Os,
-    'channel': features.basic.Channel
+    'channel': features.basic.Channel,
+    'hour': features.basic.ClickHour,
+    'count': features.basic.BasicCount,
 }
 
 models = {
@@ -100,10 +102,6 @@ def load_categorical_features(config) -> List[str]:
     return list(itertools.chain(*[feature_map[feature].categorical_features() for feature in config['features']]))
 
 
-def generate_submission(config, average_prediction):
-    pass
-
-
 def dump_json_log(options, train_results):
     config = json.load(open(options.config))
     results = {
@@ -142,6 +140,9 @@ def main():
     id_mapper = pd.read_feather(id_mapper_file)
 
     train_data, valid_data, test_data = load_datasets(config)
+    test_data = test_data.merge(id_mapper[['old_click_id']], how='inner', left_on='click_id', right_on='old_click_id')
+    test_data.drop(['old_click_id'], axis=1, inplace=True)
+
     categorical_features = load_categorical_features(config)
     model: Model = models[config['model']['name']]()
 
@@ -192,8 +193,7 @@ def main():
     submission = id_mapper.merge(test_data[['click_id', 'prediction']], how='inner', left_on=['old_click_id'],
                                  right_on='click_id')[['new_click_id', 'prediction']]
     submission_path = os.path.join(os.path.dirname(__file__), output_directory, os.path.basename(options.config) + '.submission.csv')
-    submission.rename(columns={'new_click_id': 'click_id'}).sort_values(by='click_id').to_csv(submission_path, index=False)
-    generate_submission(config, test_data)
+    submission.rename(columns={'new_click_id': 'click_id', 'prediction': target_variable}).sort_values(by='click_id').to_csv(submission_path, index=False)
     dump_json_log(options, train_results)
 
 
