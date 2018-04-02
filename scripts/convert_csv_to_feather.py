@@ -30,6 +30,6 @@ df_old_test.to_feather(os.path.join(data_dir, 'old_test.feather'))
 
 fraction = 0.001
 random_state = 114514
-df_train.sample(frac=fraction, random_state=random_state).reset_index(drop=True).to_feather(os.path.join(data_dir, 'train.feather.small'))
-df_test.sample(frac=fraction, random_state=random_state).reset_index(drop=True).to_feather(os.path.join(data_dir, 'test.feather.small'))
-df_old_test.sample(frac=fraction, random_state=random_state).reset_index(drop=True).to_feather(os.path.join(data_dir, 'old_test.feather.small'))
+df_train.sample(frac=fraction, random_state=random_state).sort_values(by='click_time').reset_index(drop=True).to_feather(os.path.join(data_dir, 'train.feather.small'))
+df_test.sample(frac=fraction, random_state=random_state).sort_values(by='click_time').reset_index(drop=True).to_feather(os.path.join(data_dir, 'test.feather.small'))
+df_old_test.sample(frac=fraction, random_state=random_state).sort_values(by='click_time').reset_index(drop=True).to_feather(os.path.join(data_dir, 'old_test.feather.small'))
