@@ -11,19 +11,23 @@ import pandas.testing
 from joblib import Memory
 from sklearn.metrics import auc, roc_curve
 
-import features.basic
+import features.interval_count
 from features import Feature
+from features.basic import Ip, App, Os, Device, Channel, ClickHour, BasicCount
 from models import LightGBM, Model
 
 memory = Memory(cachedir='.', verbose=0)
 
 feature_map = {
-    'ip': features.basic.Ip,
-    'app': features.basic.App,
-    'os': features.basic.Os,
-    'channel': features.basic.Channel,
-    'hour': features.basic.ClickHour,
-    'count': features.basic.BasicCount,
+    'ip': Ip,
+    'app': App,
+    'os': Os,
+    'device': Device,
+    'channel': Channel,
+    'hour': ClickHour,
+    'count': BasicCount,
+    'future_click_count_10': features.interval_count.generate_future_interval_count(600),
+    'past_click_count_10': features.interval_count.generate_past_interval_count(600)
 }
 
 models = {
@@ -176,15 +180,17 @@ def main():
                                                       target=target_variable,
                                                       params=config['model'])
             prediction = booster.predict(test_data[predictors])
-            prediction_valid_before_down_sampling = booster.predict(valid_data[predictors])
-            valid_fpr, valid_tpr, thresholds = roc_curve(valid_data[target_variable], prediction_valid_before_down_sampling, pos_label=1)
+            prediction_valid_original = booster.predict(valid_data[predictors])
+            valid_fpr, valid_tpr, thresholds = roc_curve(valid_data[target_variable], prediction_valid_original, pos_label=1)
             predictions.append(prediction)
+            # This only works when we are using LightGBM
             train_results.append({
                 'train_auc': result['train']['auc'][booster.best_iteration],
                 'valid_auc': result['valid']['auc'][booster.best_iteration],
-                'valid_auc_before_down_sampling': auc(valid_tpr, valid_fpr),
+                'valid_auc_original': auc(valid_fpr, valid_tpr),
                 'best_iteration': booster.best_iteration,
-                'time': time.time() - start_time
+                'time': time.time() - start_time,
+                'feature_importance': {name: int(score) for name, score in zip(booster.feature_name(), booster.feature_importance())}
             })
 
     test_data['prediction'] = sum(predictions) / len(predictions)

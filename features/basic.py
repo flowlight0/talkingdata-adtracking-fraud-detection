@@ -95,3 +95,13 @@ class BasicCount(FeatherFeatureDF):
         return features[:len(df_train)].reset_index(drop=True), \
                features[len(df_train): len(df_train) + len(df_valid)].reset_index(drop=True), \
                features[len(df_train) + len(df_valid):].reset_index(drop=True)
+
+
+class Device(FeatherFeatureDF):
+    @staticmethod
+    def categorical_features():
+        return ['device']
+
+    def create_features_from_dataframe(self, df_train: pd.DataFrame, df_valid: pd.DataFrame, df_test: pd.DataFrame):
+        return df_train[['device']], df_valid[['device']], df_test[['device']]
+
