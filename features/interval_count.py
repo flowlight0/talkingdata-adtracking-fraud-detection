@@ -108,7 +108,7 @@ def generate_past_interval_count(window_size):
 
 
 if __name__ == '__main__':
-    interval_count = generate_future_interval_count(np.timedelta64(10, 'm'))
+    interval_count = generate_future_interval_count(600)
     data_dir = os.path.join(os.path.dirname(__file__), '../data/input')
     ic = interval_count(data_dir)
     df_train = pd.read_feather(os.path.join(data_dir, 'train_0.feather.small'))
