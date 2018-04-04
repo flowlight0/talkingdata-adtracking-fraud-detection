@@ -28,6 +28,10 @@ class IntervalCount(FeatherFeatureDF):
 
 def generate_future_interval_count(window_size):
     class FutureIntervalCountSimple(IntervalCount):
+        @property
+        def name(self):
+            return super().name + '_{}'.format(window_size)
+
         @staticmethod
         def categorical_features():
             return []
@@ -65,6 +69,7 @@ def generate_future_interval_count(window_size):
             return features_train, features_valid, features_test
 
     return FutureIntervalCountSimple
+
 
 def generate_past_interval_count(window_size):
     class PastIntervalCountSimple(IntervalCount):

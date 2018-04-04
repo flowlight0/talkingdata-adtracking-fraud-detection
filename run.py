@@ -24,7 +24,9 @@ feature_map = {
     'hour': ClickHour,
     'count': BasicCount,
     'future_click_count_10': features.interval_count.generate_future_interval_count(600),
-    'past_click_count_10': features.interval_count.generate_past_interval_count(600)
+    'past_click_count_10': features.interval_count.generate_past_interval_count(600),
+    'future_click_count_90': features.interval_count.generate_future_interval_count(5400),
+    'past_click_count_90': features.interval_count.generate_past_interval_count(5400)
 }
 
 models = {
