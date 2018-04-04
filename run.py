@@ -8,7 +8,6 @@ from typing import List, Tuple
 import numpy as np
 import pandas as pd
 import pandas.testing
-from joblib import Memory
 from sklearn.metrics import auc, roc_curve
 
 import features.interval_count
@@ -111,7 +110,7 @@ def dump_json_log(options, train_results):
             'average_valid_auc': np.mean([result['valid_auc'] for result in train_results]),
             'train_auc_std': np.std([result['train_auc'] for result in train_results]),
             'valid_auc_std': np.std([result['valid_auc'] for result in train_results]),
-            'average_time': np.mean([result['time'] for result in train_results])
+            'average_train_time': np.mean([result['train_time'] for result in train_results])
         },
         'config': config,
     }
@@ -175,8 +174,14 @@ def main():
                                                       categorical_features=categorical_features,
                                                       target=target_variable,
                                                       params=config['model'])
+            test_prediction_start_time = time.time()
             prediction = booster.predict(test_data[predictors])
+            test_prediction_elapsed_time = time.time() - test_prediction_start_time
+
+            valid_prediction_start_time = time.time()
             prediction_valid_original = booster.predict(valid_data[predictors])
+            valid_prediction_elapsed_time = time.time() - valid_prediction_start_time
+
             valid_fpr, valid_tpr, thresholds = roc_curve(valid_data[target_variable], prediction_valid_original, pos_label=1)
             predictions.append(prediction)
             # This only works when we are using LightGBM
@@ -185,9 +190,14 @@ def main():
                 'valid_auc': result['valid']['auc'][booster.best_iteration],
                 'valid_auc_original': auc(valid_fpr, valid_tpr),
                 'best_iteration': booster.best_iteration,
-                'time': time.time() - start_time,
+                'train_time': time.time() - start_time,
+                'prediction_time': {
+                    'test': test_prediction_elapsed_time,
+                    'valid':valid_prediction_elapsed_time
+                },
                 'feature_importance': {name: int(score) for name, score in zip(booster.feature_name(), booster.feature_importance())}
             })
+            print("Finished processing {}-th bag: {}".format(i, str(train_results[-1])))
 
     test_data['prediction'] = sum(predictions) / len(predictions)
     old_click_to_prediction = {}
