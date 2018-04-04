@@ -16,8 +16,6 @@ from features import Feature
 from features.basic import Ip, App, Os, Device, Channel, ClickHour, BasicCount
 from models import LightGBM, Model
 
-memory = Memory(cachedir='.', verbose=0)
-
 feature_map = {
     'ip': Ip,
     'app': App,
@@ -39,7 +37,6 @@ output_directory = 'data/output'
 target_variable = 'is_attributed'
 
 
-@memory.cache
 def get_click_id_(path) -> pd.Series:
     return pd.read_feather(path)[['click_id']].astype('int32')
 
@@ -48,7 +45,6 @@ def get_click_id(config) -> pd.Series:
     return get_click_id_(get_dataset_filename(config, 'test_full'))
 
 
-@memory.cache
 def get_target_(path) -> pd.Series:
     return pd.read_feather(path)[[target_variable]]
 
