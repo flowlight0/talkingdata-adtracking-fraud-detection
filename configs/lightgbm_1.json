@@ -47,7 +47,7 @@
     },
     "negative_down_sampling": {
       "enabled": true,
-      "bagging_size": 5,
+      "bagging_size": 1,
       "random_state": 114514
     }
   }
