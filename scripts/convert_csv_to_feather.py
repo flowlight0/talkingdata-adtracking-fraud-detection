@@ -23,7 +23,8 @@ test_parse_dates = ['click_time']
 df_train = pd.read_csv(os.path.join(data_dir, 'train.csv'), dtype=dtypes, usecols=train_columns, parse_dates=train_parse_dates)
 df_test = pd.read_csv(os.path.join(data_dir, 'test.csv'), dtype=dtypes, usecols=test_columns, parse_dates=test_parse_dates)
 df_old_test = pd.read_csv(os.path.join(data_dir, 'old_test.csv'), dtype=dtypes, usecols=test_columns, parse_dates=test_parse_dates)
-df_old_test = df_old_test[df_old_test.click_time >= df_train.click_time[len(df_train) - 1]].reset_index(drop=True)
+df_old_test = df_old_test[df_old_test.click_time >= df_train.click_time[len(df_train) - 1]]
+df_old_test.reset_index(drop=True, inplace=True)
 
 df_train.to_feather(os.path.join(data_dir, 'train.feather'))
 df_test.to_feather(os.path.join(data_dir, 'test.feather'))

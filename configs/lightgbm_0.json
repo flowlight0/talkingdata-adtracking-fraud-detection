@@ -5,7 +5,7 @@
     "app",
     "channel",
     "hour",
-    'count'
+    "count"
   ],
   "model": {
     "name": "lightgbm",

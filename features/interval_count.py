@@ -68,6 +68,10 @@ def generate_future_interval_count(window_size):
 
 def generate_past_interval_count(window_size):
     class PastIntervalCountSimple(IntervalCount):
+        @property
+        def name(self):
+            return super().name + '_{}'.format(window_size)
+
         @staticmethod
         def categorical_features():
             return []
