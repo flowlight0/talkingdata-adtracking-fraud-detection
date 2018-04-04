@@ -19,7 +19,7 @@ import pandas as pd
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--train", default="data/input/train.feather")
+    parser.add_argument("--train", default="data/input/train.feather.small")
     parser.add_argument("--train_output", default="data/input/train_0.feather.small")
     parser.add_argument("--validation_output", default="data/input/train_0.feather.small")
     parser.add_argument("--valid_ratio", default=0.1, type=float)
