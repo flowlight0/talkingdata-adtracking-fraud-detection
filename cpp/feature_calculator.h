@@ -8,6 +8,7 @@
 #include <iostream>
 #include <unordered_map>
 #include <numeric>
+#include <chrono>
 #include <arrow/status.h>
 #include <arrow/io/file.h>
 #include <arrow/table.h>
