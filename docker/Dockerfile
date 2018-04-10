@@ -9,6 +9,7 @@ RUN apt-get install awscli -y
 RUN pip install --upgrade pip
 RUN pip install --upgrade awscli
 RUN pip install kaggle
+RUN conda install arrow-cpp=0.9.* -c conda-forge
 
 # setup jupyter notebook configuration
 RUN pip install --upgrade jupyter

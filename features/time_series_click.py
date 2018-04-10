@@ -1,10 +1,11 @@
 import os
+import subprocess
+import time
 
 import numpy as np
 import pandas as pd
-import time
 
-from features import FeatherFeatureDF
+from features import FeatherFeatureDF, FeatherFeature
 
 
 class IntervalCount(FeatherFeatureDF):
@@ -114,6 +115,73 @@ def generate_past_interval_count(window_size):
             return features_train, features_valid, features_test
 
     return PastIntervalCountSimple
+
+
+def generate_future_click_count(window_size_in_seconds):
+    class FutureClickCount(FeatherFeature):
+        def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
+            args = [os.path.join(os.path.dirname(__file__), '../cpp/future_click_count_main'), train_input, valid_input,
+                    test_input, train_output, valid_output, test_output, str(window_size_in_seconds)]
+            subprocess.call(args)
+
+        @staticmethod
+        def categorical_features():
+            return []
+
+        @property
+        def name(self):
+            return super().name + '_{}'.format(window_size_in_seconds)
+    return FutureClickCount
+
+def generate_future_click_ratio(window_size_in_seconds):
+    class FutureClickRatio(FeatherFeature):
+        def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
+            args = [os.path.join(os.path.dirname(__file__), '../cpp/future_click_ratio_main'), train_input, valid_input,
+                    test_input, train_output, valid_output, test_output, str(window_size_in_seconds)]
+            subprocess.call(args)
+
+        @staticmethod
+        def categorical_features():
+            return []
+
+        @property
+        def name(self):
+            return super().name + '_{}'.format(window_size_in_seconds)
+    return FutureClickRatio
+
+
+def generate_past_click_count(window_size_in_seconds):
+    class PastClickCount(FeatherFeature):
+        def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
+            args = [os.path.join(os.path.dirname(__file__), '../cpp/past_click_count_main'), train_input, valid_input,
+                    test_input, train_output, valid_output, test_output, str(window_size_in_seconds)]
+            subprocess.call(args)
+
+        @staticmethod
+        def categorical_features():
+            return []
+
+        @property
+        def name(self):
+            return super().name + '_{}'.format(window_size_in_seconds)
+    return PastClickCount
+
+def generate_past_click_ratio(window_size_in_seconds):
+    class PastClickRatio(FeatherFeature):
+        def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
+            args = [os.path.join(os.path.dirname(__file__), '../cpp/past_click_ratio_main'), train_input, valid_input,
+                    test_input, train_output, valid_output, test_output, str(window_size_in_seconds)]
+            subprocess.call(args)
+
+        @staticmethod
+        def categorical_features():
+            return []
+
+        @property
+        def name(self):
+            return super().name + '_{}'.format(window_size_in_seconds)
+    return PastClickRatio
+
 
 
 if __name__ == '__main__':

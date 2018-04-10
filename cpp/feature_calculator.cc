@@ -2,16 +2,18 @@
 #include <arrow/ipc/feather.h>
 #include <arrow/io/file.h>
 #include <arrow/table.h>
+#include <arrow/builder.h>
 #include <memory>
 #include <chrono>
+#include <numeric>
 #include <iostream>
 #include <cassert>
 using std::cout;
 using std::endl;
 
-#define CHECK_RESULT_OK(s) do { \
-    arrow::Status status = (s); \
-    assert(status.ok()); \
+#define CHECK_RESULT_OK(s) do {                 \
+    arrow::Status status = (s);                 \
+    assert(status.ok());                        \
   } while(0)
 
 int find_column_number(const std::unique_ptr<arrow::ipc::feather::TableReader> &reader, const std::string &column_name) {
