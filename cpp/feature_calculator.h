@@ -159,11 +159,11 @@ template <typename TargetType, typename TargetArrowType> class GroupedFeatureCal
         const uint64_t h = generate_hash(i, hash_mask);
         grouped_click_times[h].push_back(i);
       }
-      auto hash_construction_duration = std::chrono::duration_cast<std::chrono::seconds>(hash_construction_start - std::chrono::system_clock::now());
+      auto hash_construction_duration = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - hash_construction_start);
       
       auto feature_caculation_start = std::chrono::system_clock::now();
       std::vector<TargetType> feature = calculate_feature(grouped_click_times);
-      auto feature_caculation_duration = std::chrono::duration_cast<std::chrono::seconds>(feature_caculation_start - std::chrono::system_clock::now());
+      auto feature_caculation_duration = std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now() - feature_caculation_start);
 
       auto output_start = std::chrono::system_clock::now();
       const std::string feature_name = this->name() + get_feature_name_suffix(key_mask);
@@ -183,7 +183,7 @@ template <typename TargetType, typename TargetArrowType> class GroupedFeatureCal
         ARROW_RETURN_NOT_OK(builder.Finish(&array));
         ARROW_RETURN_NOT_OK(writer->Append(feature_name, *array));
       }
-      auto output_duration = std::chrono::duration_cast<std::chrono::seconds>(output_start - std::chrono::system_clock::now());
+      auto output_duration = std::chrono::duration_cast<std::chrono::minutes>(std::chrono::system_clock::now() - output_start);
       std::cout << feature_name << ": hash = " << hash_construction_duration.count() << " [s], feature = "
                 << feature_caculation_duration.count() << " [s], output = " << output_duration.count() << " [s]" << std::endl;
     }
