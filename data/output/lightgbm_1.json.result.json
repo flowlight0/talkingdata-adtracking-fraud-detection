@@ -1,0 +1,109 @@
+{
+  "training": {
+    "trials": [
+      {
+        "train_auc": 0.9829162128054475,
+        "valid_auc": 0.9786454697863164,
+        "valid_auc_original": 0.9787249953561273,
+        "best_iteration": 202,
+        "train_time": 395.35055112838745,
+        "prediction_time": {
+          "test": 111.88079977035522,
+          "valid": 111.38641214370728
+        },
+        "feature_importance": {
+          "ip": 1181,
+          "os": 821,
+          "app": 703,
+          "channel": 1321,
+          "device": 118,
+          "hour": 925,
+          "n_channels": 895,
+          "ip_app_count": 1418,
+          "ip_app_os_count": 1010,
+          "fic-ip-600": 918,
+          "fic-app-600": 644,
+          "fic-os-600": 561,
+          "fic-device-600": 640,
+          "fic-channel-600": 615,
+          "pic-ip-600": 810,
+          "pic-app-600": 575,
+          "pic-os-600": 506,
+          "pic-device-600": 603,
+          "pic-channel-600": 584,
+          "fic-ip-5400": 1100,
+          "fic-app-5400": 757,
+          "fic-os-5400": 764,
+          "fic-device-5400": 818,
+          "fic-channel-5400": 635,
+          "pic-ip-5400": 989,
+          "pic-app-5400": 687,
+          "pic-os-5400": 743,
+          "pic-device-5400": 710,
+          "pic-channel-5400": 635
+        }
+      }
+    ],
+    "average_train_auc": 0.9829162128054475,
+    "average_valid_auc": 0.9786454697863164,
+    "train_auc_std": 0.0,
+    "valid_auc_std": 0.0,
+    "average_train_time": 395.35055112838745
+  },
+  "config": {
+    "features": [
+      "ip",
+      "os",
+      "app",
+      "channel",
+      "device",
+      "hour",
+      "count",
+      "future_click_count_10",
+      "past_click_count_10",
+      "future_click_count_90",
+      "past_click_count_90"
+    ],
+    "model": {
+      "name": "lightgbm",
+      "model_params": {
+        "boosting_type": "gbdt",
+        "objective": "binary",
+        "metric": "auc",
+        "learning_rate": 0.1,
+        "num_leaves": 255,
+        "max_depth": 8,
+        "min_child_samples": 100,
+        "max_bin": 100,
+        "subsample": 0.7,
+        "subsample_freq": 1,
+        "colsample_bytree": 0.7,
+        "min_child_weight": 0,
+        "subsample_for_bin": 200000,
+        "min_split_gain": 0,
+        "reg_alpha": 0,
+        "reg_lambda": 0,
+        "verbose": 0
+      },
+      "train_params": {
+        "num_boost_round": 350,
+        "early_stopping_rounds": 30
+      }
+    },
+    "dataset": {
+      "input_directory": "data/input/",
+      "cache_directory": "data/working/",
+      "files": {
+        "train": "train_0.feather",
+        "valid": "valid_0.feather",
+        "test_full": "old_test.feather",
+        "test_submission": "test.feather"
+      },
+      "negative_down_sampling": {
+        "enabled": true,
+        "bagging_size": 1,
+        "random_state": 114514
+      }
+    }
+  }
+}

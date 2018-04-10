@@ -1,0 +1,75 @@
+{
+  "training": {
+    "trials": [
+      {
+        "train_auc": 0.9652634046074612,
+        "valid_auc": 0.9670009552757459,
+        "valid_auc_original": 0.9671021253905139,
+        "best_iteration": 101,
+        "train_time": 114.79918265342712,
+        "prediction_time": {
+          "test": 42.00256705284119,
+          "valid": 41.743053913116455
+        },
+        "feature_importance": {
+          "os": 2089,
+          "app": 1653,
+          "channel": 2293
+        }
+      }
+    ],
+    "average_train_auc": 0.9652634046074612,
+    "average_valid_auc": 0.9670009552757459,
+    "train_auc_std": 0.0,
+    "valid_auc_std": 0.0,
+    "average_train_time": 114.79918265342712
+  },
+  "config": {
+    "features": [
+      "os",
+      "app",
+      "channel"
+    ],
+    "model": {
+      "name": "lightgbm",
+      "model_params": {
+        "boosting_type": "gbdt",
+        "objective": "binary",
+        "metric": "auc",
+        "learning_rate": 0.1,
+        "num_leaves": 255,
+        "max_depth": 8,
+        "min_child_samples": 100,
+        "max_bin": 100,
+        "subsample": 0.7,
+        "subsample_freq": 1,
+        "colsample_bytree": 0.7,
+        "min_child_weight": 0,
+        "subsample_for_bin": 200000,
+        "min_split_gain": 0,
+        "reg_alpha": 0,
+        "reg_lambda": 0,
+        "verbose": 0
+      },
+      "train_params": {
+        "num_boost_round": 350,
+        "early_stopping_rounds": 30
+      }
+    },
+    "dataset": {
+      "input_directory": "data/input/",
+      "cache_directory": "data/working/",
+      "files": {
+        "train": "train_0.feather",
+        "valid": "valid_0.feather",
+        "test_full": "old_test.feather",
+        "test_submission": "test.feather"
+      },
+      "negative_down_sampling": {
+        "enabled": true,
+        "bagging_size": 1,
+        "random_state": 114514
+      }
+    }
+  }
+}
