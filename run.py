@@ -10,7 +10,7 @@ import pandas as pd
 import pandas.testing
 from sklearn.metrics import auc, roc_curve
 
-import features.interval_count
+import features.time_series_click
 from features import Feature
 from features.basic import Ip, App, Os, Device, Channel, ClickHour, BasicCount
 from models import LightGBM, Model
@@ -23,10 +23,14 @@ feature_map = {
     'channel': Channel,
     'hour': ClickHour,
     'count': BasicCount,
-    'future_click_count_10': features.interval_count.generate_future_interval_count(600),
-    'past_click_count_10': features.interval_count.generate_past_interval_count(600),
-    'future_click_count_90': features.interval_count.generate_future_interval_count(5400),
-    'past_click_count_90': features.interval_count.generate_past_interval_count(5400)
+    'future_click_count_10': features.time_series_click.generate_future_click_count(600),
+    'past_click_count_10': features.time_series_click.generate_past_click_count(600),
+    'future_click_count_80': features.time_series_click.generate_future_click_count(4800),
+    'past_click_count_80': features.time_series_click.generate_past_click_count(4800),
+    'future_click_ratio_10': features.time_series_click.generate_future_click_ratio(600),
+    'past_click_ratio_10': features.time_series_click.generate_future_click_ratio(600),
+    'future_click_ratio_80': features.time_series_click.generate_future_click_ratio(4800),
+    'past_click_ratio_80': features.time_series_click.generate_future_click_ratio(4800)
 }
 
 models = {
@@ -78,6 +82,9 @@ def get_dataset_filename(config, dataset_type: str) -> str:
 
 def load_datasets(config, index=None) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     cache_dir: str = config['dataset']['cache_directory']
+    for feature in config['features']:
+        assert feature in feature_map, "Uknown feature {}".format(feature)
+
     feature_list: List[Feature] = [feature_map[feature](cache_dir) for feature in config['features']]
     assert len(feature_list) > 0
 
