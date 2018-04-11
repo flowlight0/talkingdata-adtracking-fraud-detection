@@ -50,12 +50,15 @@ def get_click_id(config) -> pd.Series:
     return get_click_id_(get_dataset_filename(config, 'test_full'))
 
 
-def get_target_(path) -> pd.Series:
-    return pd.read_feather(path)[[target_variable]]
+def get_target_(path, index=None) -> pd.Series:
+    if index is None:
+        return pd.read_feather(path)[[target_variable]]
+    else:
+        return pd.read_feather(path).loc[index, [target_variable]]
 
 
-def get_target(config, dataset_type: str) -> pd.Series:
-    return get_target_(get_dataset_filename(config, dataset_type))
+def get_target(config, dataset_type: str, index=None) -> pd.Series:
+    return get_target_(get_dataset_filename(config, dataset_type), index)
 
 
 def load_dataset(paths, index=None) -> pd.DataFrame:
@@ -66,7 +69,7 @@ def load_dataset(paths, index=None) -> pd.DataFrame:
         if index is None:
             feature_datasets.append(pd.read_feather(path))
         else:
-            feature_datasets.append(pd.read_feather(path).loc(index))
+            feature_datasets.append(pd.read_feather(path).loc[index])
 
     # check if all of feature dataset share the same index
     index = feature_datasets[0].index
@@ -80,12 +83,8 @@ def get_dataset_filename(config, dataset_type: str) -> str:
     return os.path.join(config['dataset']['input_directory'], config['dataset']['files'][dataset_type])
 
 
-def load_datasets(config, index=None) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
-    cache_dir: str = config['dataset']['cache_directory']
-    for feature in config['features']:
-        assert feature in feature_map, "Uknown feature {}".format(feature)
-
-    feature_list: List[Feature] = [feature_map[feature](cache_dir) for feature in config['features']]
+def load_datasets(config, random_state) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    feature_list = get_feature_list(config)
     assert len(feature_list) > 0
 
     train_path = get_dataset_filename(config, 'train')
@@ -95,15 +94,14 @@ def load_datasets(config, index=None) -> Tuple[pd.DataFrame, pd.DataFrame, pd.Da
     feature_path_lists = [feature.create_features(train_path, valid_path, test_path) for feature in feature_list]
     train_paths = [feature_path_list[0] for feature_path_list in feature_path_lists]
     valid_paths = [feature_path_list[1] for feature_path_list in feature_path_lists]
-    test_paths = [feature_path_list[2] for feature_path_list in feature_path_lists]
 
-    train = load_dataset(train_paths, index)
-    valid = load_dataset(valid_paths, index)
-    test = load_dataset(test_paths, index)
-    test['click_id'] = get_click_id(config)
-    train[target_variable] = get_target(config, 'train')
-    valid[target_variable] = get_target(config, 'valid')
-    return train, valid, test
+    train_index= negative_down_sampling(train_path, random_state=random_state)
+    valid_index = negative_down_sampling(valid_path, random_state=random_state)
+    train = load_dataset(train_paths, train_index)
+    valid = load_dataset(valid_paths, valid_index)
+    train[target_variable] = get_target(config, 'train', train_index)
+    valid[target_variable] = get_target(config, 'valid', valid_index)
+    return train, valid
 
 
 def load_categorical_features(config) -> List[str]:
@@ -128,12 +126,38 @@ def dump_json_log(options, train_results):
     json.dump(results, open(log_path, 'w'), indent=2)
 
 
-def negative_down_sampling(data, random_state):
+def negative_down_sampling(data_path, random_state):
+    data = pd.read_feather(data_path)
     positive_data = data[data[target_variable] == 1]
     positive_ratio = float(len(positive_data)) / len(data)
     negative_data = data[data[target_variable] == 0].sample(
         frac=positive_ratio / (1 - positive_ratio), random_state=random_state)
-    return pd.concat([positive_data, negative_data])
+    return positive_data.index.union(negative_data.index).sort_values()
+
+
+def load_test_dataset(config, id_mapper):
+    ids_we_need = set(id_mapper['old_click_id'])
+    feature_list = get_feature_list(config)
+    assert len(feature_list) > 0
+    train_path = get_dataset_filename(config, 'train')
+    valid_path = get_dataset_filename(config, 'valid')
+    test_path = get_dataset_filename(config, 'test_full')
+    feature_path_lists = [feature.create_features(train_path, valid_path, test_path) for feature in feature_list]
+    test_feature_paths = [feature_path_list[2] for feature_path_list in feature_path_lists]
+
+    df_test = pd.read_feather(test_path)
+    df_test = df_test[df_test.click_id.isin(ids_we_need)]
+    test = load_dataset(test_feature_paths, df_test.index)
+    test['click_id'] = df_test.click_id
+    return test
+
+
+def get_feature_list(config):
+    cache_dir: str = config['dataset']['cache_directory']
+    for feature in config['features']:
+        assert feature in feature_map, "Unknown feature {}".format(feature)
+    feature_list: List[Feature] = [feature_map[feature](cache_dir) for feature in config['features']]
+    return feature_list
 
 
 def main():
@@ -146,67 +170,46 @@ def main():
     id_mapper_file = 'data/working/id_mapping.feather'
     assert os.path.exists(id_mapper_file), "Please download {} from s3 before running this script".format(id_mapper_file)
     id_mapper = pd.read_feather(id_mapper_file)
-    ids_we_need = set(id_mapper['old_click_id'])
-    train_data, valid_data, test_data = load_datasets(config)
-    test_data = test_data[test_data.click_id.isin(ids_we_need)]
+    test_data = load_test_dataset(config, id_mapper)
 
     categorical_features = load_categorical_features(config)
     model: Model = models[config['model']['name']]()
-
     predictions = []
     train_results = []
     negative_down_sampling_config = config['dataset']['negative_down_sampling']
-    predictors = train_data.columns.drop(target_variable)
 
     if not negative_down_sampling_config['enabled']:
+        raise NotImplementedError("We should always downsample")
+
+    for i in range(negative_down_sampling_config['bagging_size']):
         start_time = time.time()
-        booster, result = model.train_and_predict(train=train_data,
-                                                  valid=valid_data,
+        sampled_train_data, sampled_valid_data = load_datasets(config, random_state=i)
+        predictors = sampled_train_data.columns.drop(target_variable)
+        booster, result = model.train_and_predict(train=sampled_train_data,
+                                                  valid=sampled_valid_data,
                                                   categorical_features=categorical_features,
                                                   target=target_variable,
                                                   params=config['model'])
+        test_prediction_start_time = time.time()
         prediction = booster.predict(test_data[predictors])
+        test_prediction_elapsed_time = time.time() - test_prediction_start_time
+
+        valid_prediction_start_time = time.time()
+        valid_prediction_elapsed_time = time.time() - valid_prediction_start_time
         predictions.append(prediction)
+        # This only works when we are using LightGBM
         train_results.append({
             'train_auc': result['train']['auc'][booster.best_iteration],
             'valid_auc': result['valid']['auc'][booster.best_iteration],
             'best_iteration': booster.best_iteration,
-            'time': time.time() - start_time
+            'train_time': time.time() - start_time,
+            'prediction_time': {
+                'test': test_prediction_elapsed_time,
+                'valid': valid_prediction_elapsed_time
+            },
+            'feature_importance': {name: int(score) for name, score in zip(booster.feature_name(), booster.feature_importance())}
         })
-    else:
-        for i in range(negative_down_sampling_config['bagging_size']):
-            start_time = time.time()
-            sampled_train_data: pd.DataFrame = negative_down_sampling(train_data, random_state=i)
-            sampled_valid_data: pd.DataFrame = negative_down_sampling(valid_data, random_state=i)
-            booster, result = model.train_and_predict(train=sampled_train_data,
-                                                      valid=sampled_valid_data,
-                                                      categorical_features=categorical_features,
-                                                      target=target_variable,
-                                                      params=config['model'])
-            test_prediction_start_time = time.time()
-            prediction = booster.predict(test_data[predictors])
-            test_prediction_elapsed_time = time.time() - test_prediction_start_time
-
-            valid_prediction_start_time = time.time()
-            prediction_valid_original = booster.predict(valid_data[predictors])
-            valid_prediction_elapsed_time = time.time() - valid_prediction_start_time
-
-            valid_fpr, valid_tpr, thresholds = roc_curve(valid_data[target_variable], prediction_valid_original, pos_label=1)
-            predictions.append(prediction)
-            # This only works when we are using LightGBM
-            train_results.append({
-                'train_auc': result['train']['auc'][booster.best_iteration],
-                'valid_auc': result['valid']['auc'][booster.best_iteration],
-                'valid_auc_original': auc(valid_fpr, valid_tpr),
-                'best_iteration': booster.best_iteration,
-                'train_time': time.time() - start_time,
-                'prediction_time': {
-                    'test': test_prediction_elapsed_time,
-                    'valid':valid_prediction_elapsed_time
-                },
-                'feature_importance': {name: int(score) for name, score in zip(booster.feature_name(), booster.feature_importance())}
-            })
-            print("Finished processing {}-th bag: {}".format(i, str(train_results[-1])))
+        print("Finished processing {}-th bag: {}".format(i, str(train_results[-1])))
 
     test_data['prediction'] = sum(predictions) / len(predictions)
     old_click_to_prediction = {}
