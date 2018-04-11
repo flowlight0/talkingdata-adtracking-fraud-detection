@@ -22,7 +22,7 @@
 #include "feature_calculator.h"
 using namespace std;
 
-class PastClickRatio : public GroupedFeatureCalculator<float_t, arrow::FloatType> {
+class PastClickRatio : public GroupedFeatureCalculator<float, arrow::FloatType> {
 public:
   PastClickRatio(uint64_t window_size_in_seconds): GroupedFeatureCalculator(), window_size_in_nanoseconds(window_size_in_seconds * 1000000000ULL) {}
 
@@ -34,8 +34,8 @@ public:
     return "PastClickRatio_" + o.str();
   }
 
-  virtual vector<float_t> calculate_feature(const unordered_map<uint64_t, vector<size_t>> &grouped_click_times) {
-    vector<float_t> feature(ip.size());
+  virtual vector<float> calculate_feature(const std::unordered_map<uint64_t, vector<size_t>> &grouped_click_times) {
+    vector<float> feature(ip.size());
     for (const auto &entry : grouped_click_times) {
       const auto &group_click_times = entry.second;
       const size_t size = group_click_times.size();

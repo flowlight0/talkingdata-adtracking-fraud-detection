@@ -22,7 +22,7 @@
 #include "feature_calculator.h"
 using namespace std;
 
-class FutureClickRatio : public GroupedFeatureCalculator<float_t, arrow::FloatType> {
+class FutureClickRatio : public GroupedFeatureCalculator<float, arrow::FloatType> {
 public:
   FutureClickRatio(uint64_t window_size_in_seconds): GroupedFeatureCalculator(), window_size_in_nanoseconds(window_size_in_seconds * 1000000000ULL) {}
 
@@ -34,14 +34,14 @@ public:
     return "FutureClickRatio_" + o.str();
   }
 
-  virtual vector<float_t> calculate_feature(const unordered_map<uint64_t, vector<size_t>> &grouped_click_times) {
-    vector<float_t> feature(ip.size());
+  virtual vector<float> calculate_feature(const unordered_map<uint64_t, vector<size_t>> &grouped_click_times) {
+    vector<float> feature(ip.size());
     for (const auto &entry : grouped_click_times) {
       const auto &group_click_times = entry.second;
       const size_t size = group_click_times.size();
       size_t cursor = 0;
       for (size_t index = 0; index < size; index++) {
-        while (cursor < size && (click_time[group_click_times[index]] - click_time[group_click_times[cursor]] > window_size_in_nanoseconds)) {
+        while (cursor < size && (click_time[group_click_times[cursor]] - click_time[group_click_times[index]]) <= window_size_in_nanoseconds) {
           cursor++;
         }
         feature[group_click_times[index]] = float(cursor - index) / size;
