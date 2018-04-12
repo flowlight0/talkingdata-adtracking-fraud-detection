@@ -8,9 +8,7 @@
     "hour",
     "count",
     "future_click_count_10",
-    "future_click_count_80",
-    "future_click_ratio_10",
-    "future_click_ratio_80"
+    "future_click_count_80"
   ],
   "model": {
     "name": "lightgbm",
