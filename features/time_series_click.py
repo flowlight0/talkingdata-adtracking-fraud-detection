@@ -131,7 +131,9 @@ def generate_future_click_count(window_size_in_seconds):
         @property
         def name(self):
             return super().name + '_{}'.format(window_size_in_seconds)
+
     return FutureClickCount
+
 
 def generate_future_click_ratio(window_size_in_seconds):
     class FutureClickRatio(FeatherFeature):
@@ -147,6 +149,7 @@ def generate_future_click_ratio(window_size_in_seconds):
         @property
         def name(self):
             return super().name + '_{}'.format(window_size_in_seconds)
+
     return FutureClickRatio
 
 
@@ -164,7 +167,9 @@ def generate_past_click_count(window_size_in_seconds):
         @property
         def name(self):
             return super().name + '_{}'.format(window_size_in_seconds)
+
     return PastClickCount
+
 
 def generate_past_click_ratio(window_size_in_seconds):
     class PastClickRatio(FeatherFeature):
@@ -180,9 +185,30 @@ def generate_past_click_ratio(window_size_in_seconds):
         @property
         def name(self):
             return super().name + '_{}'.format(window_size_in_seconds)
+
     return PastClickRatio
 
 
+class NextClickTimeDelta(FeatherFeature):
+    def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/next_click_time_delta_main'), train_input, valid_input,
+                test_input, train_output, valid_output, test_output]
+        subprocess.call(args)
+
+    @staticmethod
+    def categorical_features():
+        return []
+
+
+class PrevClickTimeDelta(FeatherFeature):
+    def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/prev_click_time_delta_main'), train_input, valid_input,
+                test_input, train_output, valid_output, test_output]
+        subprocess.call(args)
+
+    @staticmethod
+    def categorical_features():
+        return []
 
 if __name__ == '__main__':
     interval_count = generate_future_interval_count(600)

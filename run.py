@@ -8,7 +8,6 @@ from typing import List, Tuple
 import numpy as np
 import pandas as pd
 import pandas.testing
-from sklearn.metrics import auc, roc_curve
 
 import features.time_series_click
 from features import Feature
@@ -30,7 +29,9 @@ feature_map = {
     'future_click_ratio_10': features.time_series_click.generate_future_click_ratio(600),
     'past_click_ratio_10': features.time_series_click.generate_future_click_ratio(600),
     'future_click_ratio_80': features.time_series_click.generate_future_click_ratio(4800),
-    'past_click_ratio_80': features.time_series_click.generate_future_click_ratio(4800)
+    'past_click_ratio_80': features.time_series_click.generate_future_click_ratio(4800),
+    'next_click_time_delta': features.time_series_click.NextClickTimeDelta,
+    'prev_click_time_delta': features.time_series_click.PrevClickTimeDelta
 }
 
 models = {
