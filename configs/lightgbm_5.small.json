@@ -10,7 +10,9 @@
     "future_click_count_10",
     "future_click_count_80",
     "next_click_time_delta",
-    "prev_click_time_delta"
+    "prev_click_time_delta",
+    "exact_same_click",
+    "exact_same_click_id"
   ],
   "model": {
     "name": "lightgbm",

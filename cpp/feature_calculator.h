@@ -151,6 +151,10 @@ template <typename TargetType, typename TargetArrowType> class GroupedFeatureCal
     }
     
     for (uint16_t key_mask = 1; key_mask <= KEY_MASK_ALL; key_mask++) {
+      if (!this->filter(key_mask)) {
+        continue;
+      }
+      
       grouped_click_times.clear();
       
       auto hash_construction_start = std::chrono::system_clock::now();
@@ -195,6 +199,9 @@ template <typename TargetType, typename TargetArrowType> class GroupedFeatureCal
   
  protected:
   virtual std::vector<TargetType> calculate_feature(const std::unordered_map<uint64_t, std::vector<size_t>> &grouped_click_times) = 0;
+  virtual bool filter(uint16_t key_mask) {
+    return true;
+  }
 };
 
 

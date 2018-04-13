@@ -210,6 +210,27 @@ class PrevClickTimeDelta(FeatherFeature):
     def categorical_features():
         return []
 
+class ExactSameClick(FeatherFeature):
+    def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/exact_same_click_main'), train_input, valid_input,
+                test_input, train_output, valid_output, test_output]
+        subprocess.call(args)
+
+    @staticmethod
+    def categorical_features():
+        return []
+
+
+class ExactSameClickId(FeatherFeature):
+    def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/exact_same_click_id_main'), train_input, valid_input,
+                test_input, train_output, valid_output, test_output]
+        subprocess.call(args)
+
+    @staticmethod
+    def categorical_features():
+        return []
+
 if __name__ == '__main__':
     interval_count = generate_future_interval_count(600)
     data_dir = os.path.join(os.path.dirname(__file__), '../data/input')
