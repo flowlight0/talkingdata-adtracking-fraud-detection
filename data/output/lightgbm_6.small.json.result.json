@@ -5,10 +5,10 @@
         "train_auc": 0.9880175124465019,
         "valid_auc": 0.9595719381688466,
         "best_iteration": 69,
-        "train_time": 1.298064947128296,
+        "train_time": 1.1871979236602783,
         "prediction_time": {
-          "test": 0.13663220405578613,
-          "valid": 2.1457672119140625e-06
+          "test": 0.13335514068603516,
+          "valid": 0.0
         },
         "feature_importance": {
           "ip": 0,
@@ -182,7 +182,7 @@
     "average_valid_auc": 0.9595719381688466,
     "train_auc_std": 0.0,
     "valid_auc_std": 0.0,
-    "average_train_time": 1.298064947128296
+    "average_train_time": 1.1871979236602783
   },
   "config": {
     "features": [
