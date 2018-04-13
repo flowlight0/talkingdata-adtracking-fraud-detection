@@ -3,6 +3,7 @@ import itertools
 import json
 import os
 import time
+import gc
 from typing import List, Tuple
 
 import numpy as np
@@ -33,7 +34,8 @@ feature_map = {
     'next_click_time_delta': features.time_series_click.NextClickTimeDelta,
     'prev_click_time_delta': features.time_series_click.PrevClickTimeDelta,
     'exact_same_click': features.time_series_click.ExactSameClick, # It will be duplicated with all id counts
-    'exact_same_click_id': features.time_series_click.ExactSameClickId
+    'exact_same_click_id': features.time_series_click.ExactSameClickId,
+    'all_click_count': features.time_series_click.AllClickCount,
 }
 
 models = {
@@ -73,7 +75,7 @@ def load_dataset(paths, index=None) -> pd.DataFrame:
             feature_datasets.append(pd.read_feather(path))
         else:
             feature_datasets.append(pd.read_feather(path).loc[index])
-
+        gc.collect()
     # check if all of feature dataset share the same index
     index = feature_datasets[0].index
     for feature_dataset in feature_datasets[1:]:
@@ -100,8 +102,11 @@ def load_datasets(config, random_state) -> Tuple[pd.DataFrame, pd.DataFrame]:
 
     train_index= negative_down_sampling(train_path, random_state=random_state)
     valid_index = negative_down_sampling(valid_path, random_state=random_state)
+    gc.collect()
     train = load_dataset(train_paths, train_index)
+    gc.collect()
     valid = load_dataset(valid_paths, valid_index)
+    gc.collect()
     train[target_variable] = get_target(config, 'train', train_index)
     valid[target_variable] = get_target(config, 'valid', valid_index)
     return train, valid

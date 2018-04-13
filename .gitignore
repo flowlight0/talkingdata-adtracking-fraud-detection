@@ -107,3 +107,4 @@ data/*/*.feather
 data/*/*.csv
 
 cpp/*.dSYM
+cpp/*_main
