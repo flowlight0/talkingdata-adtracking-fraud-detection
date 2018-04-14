@@ -23,6 +23,7 @@ feature_map = {
     'channel': Channel,
     'hour': ClickHour,
     'count': BasicCount,
+    'future_click_count_1': features.time_series_click.generate_future_click_count(60),
     'future_click_count_10': features.time_series_click.generate_future_click_count(600),
     'past_click_count_10': features.time_series_click.generate_past_click_count(600),
     'future_click_count_80': features.time_series_click.generate_future_click_count(4800),
