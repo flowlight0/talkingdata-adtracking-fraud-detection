@@ -210,6 +210,51 @@ class PrevClickTimeDelta(FeatherFeature):
     def categorical_features():
         return []
 
+
+class NextClickTimeDeltaV2(FeatherFeature):
+    def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/next_click_time_delta_v2_main'), train_input,
+                valid_input, test_input, train_output, valid_output, test_output]
+        subprocess.call(args)
+
+    @staticmethod
+    def categorical_features():
+        return []
+
+
+class PrevClickTimeDeltaV2(FeatherFeature):
+    def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/prev_click_time_delta_v2_main'), train_input,
+                valid_input, test_input, train_output, valid_output, test_output]
+        subprocess.call(args)
+
+    @staticmethod
+    def categorical_features():
+        return []
+
+
+class NextClickTimeDeltaV3(FeatherFeature):
+    def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/next_click_time_delta_v3_main'), train_input,
+                valid_input, test_input, train_output, valid_output, test_output]
+        subprocess.call(args)
+
+    @staticmethod
+    def categorical_features():
+        return []
+
+
+class PrevClickTimeDeltaV3(FeatherFeature):
+    def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/prev_click_time_delta_v3_main'), train_input,
+                valid_input, test_input, train_output, valid_output, test_output]
+        subprocess.call(args)
+
+    @staticmethod
+    def categorical_features():
+        return []
+
+
 class ExactSameClick(FeatherFeature):
     def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
         args = [os.path.join(os.path.dirname(__file__), '../cpp/exact_same_click_main'), train_input, valid_input,

@@ -34,6 +34,10 @@ feature_map = {
     'past_click_ratio_80': features.time_series_click.generate_future_click_ratio(4800),
     'next_click_time_delta': features.time_series_click.NextClickTimeDelta,
     'prev_click_time_delta': features.time_series_click.PrevClickTimeDelta,
+    'next_click_time_delta_v2': features.time_series_click.NextClickTimeDeltaV2,
+    'prev_click_time_delta_v2': features.time_series_click.PrevClickTimeDeltaV2,
+    'next_click_time_delta_v3': features.time_series_click.NextClickTimeDeltaV3,
+    'prev_click_time_delta_v3': features.time_series_click.PrevClickTimeDeltaV3,
     'exact_same_click': features.time_series_click.ExactSameClick, # It will be duplicated with all id counts
     'exact_same_click_id': features.time_series_click.ExactSameClickId,
     'all_click_count': features.time_series_click.AllClickCount,
