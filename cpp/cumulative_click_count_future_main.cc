@@ -40,10 +40,6 @@ public:
     }
     return feature;
   }
-
-  virtual bool filter(uint16_t key_mask) {
-    return key_mask & KEY_APP;
-  }
 };
 
 int main(int argc, char **argv)
