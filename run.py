@@ -39,6 +39,7 @@ feature_map = {
     'all_click_count': features.time_series_click.AllClickCount,
     'average_attributed_ratio': features.time_series_click.AverageAttributedRatio,
     "cumulative_click_count": features.time_series_click.CumulativeClickCount,
+    'cumulative_click_count_future':  features.time_series_click.CumulativeClickCountFuture,
 }
 
 models = {
