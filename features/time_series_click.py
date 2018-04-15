@@ -290,7 +290,8 @@ class AllClickCount(FeatherFeature):
 
 class AverageAttributedRatio(FeatherFeature):
     def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
-        args = [os.path.join(os.path.dirname(__file__), '../cpp/average_attributed_ratio_main'), train_input, valid_input,
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/average_attributed_ratio_main'), train_input,
+                valid_input,
                 test_input, train_output, valid_output, test_output]
         subprocess.call(args)
 
@@ -321,6 +322,54 @@ class CumulativeClickCountFuture(FeatherFeature):
     @staticmethod
     def categorical_features():
         return []
+
+
+class NextApp(FeatherFeature):
+    def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/next_app_main'), train_input,
+                valid_input,
+                test_input, train_output, valid_output, test_output]
+        subprocess.call(args)
+
+    @staticmethod
+    def categorical_features():
+        return ['NextApp-ip-dev-os', 'NextApp-ip-dev-os-cha']
+
+
+class PrevApp(FeatherFeature):
+    def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/prev_app_main'), train_input,
+                valid_input,
+                test_input, train_output, valid_output, test_output]
+        subprocess.call(args)
+
+    @staticmethod
+    def categorical_features():
+        return ['PrevApp-ip-dev-os', 'PrevApp-ip-dev-os-cha']
+
+
+class NextChannel(FeatherFeature):
+    def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/next_channel_main'), train_input,
+                valid_input,
+                test_input, train_output, valid_output, test_output]
+        subprocess.call(args)
+
+    @staticmethod
+    def categorical_features():
+        return ['NextChannel-ip-dev-os', 'NextChannel-ip-app-dev-os']
+
+
+class PrevChannel(FeatherFeature):
+    def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/prev_channel_main'), train_input,
+                valid_input,
+                test_input, train_output, valid_output, test_output]
+        subprocess.call(args)
+
+    @staticmethod
+    def categorical_features():
+        return ['PrevChannel-ip-dev-os', 'PrevChannel-ip-app-dev-os']
 
 
 if __name__ == '__main__':

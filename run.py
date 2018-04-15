@@ -42,8 +42,12 @@ feature_map = {
     'exact_same_click_id': features.time_series_click.ExactSameClickId,
     'all_click_count': features.time_series_click.AllClickCount,
     'average_attributed_ratio': features.time_series_click.AverageAttributedRatio,
-    "cumulative_click_count": features.time_series_click.CumulativeClickCount,
+    'cumulative_click_count': features.time_series_click.CumulativeClickCount,
     'cumulative_click_count_future':  features.time_series_click.CumulativeClickCountFuture,
+    'next_channel': features.time_series_click.NextChannel,
+    'prev_channel': features.time_series_click.PrevChannel,
+    'next_app': features.time_series_click.NextApp,
+    'prev_app': features.time_series_click.PrevApp
 }
 
 models = {
