@@ -37,8 +37,10 @@
     "input_directory": "data/input/",
     "cache_directory": "data/working/",
     "files": {
-      "train": "train.feather.small",
-      "test": "old_test.feather.small"
+      "train": "train_0.feather.small",
+      "valid": "valid_0.feather.small",
+      "test_full": "old_test.feather.small",
+      "test_submission": "test.feather.small"
     },
     "negative_down_sampling": {
       "enabled": true,

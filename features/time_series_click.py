@@ -10,21 +10,15 @@ from features import FeatherFeatureDF, FeatherFeature
 
 class IntervalCount(FeatherFeatureDF):
     @staticmethod
-    def validate_timestamps(df_train: pd.DataFrame, df_valid: pd.DataFrame, df_test: pd.DataFrame):
+    def validate_timestamps(df_train: pd.DataFrame, df_test: pd.DataFrame):
         if not df_train.click_time.is_monotonic:
             raise ValueError('Click train in train must be monotonic')
-
-        if not df_valid.click_time.is_monotonic:
-            raise ValueError('Click valid in train must be monotonic')
 
         if not df_test.click_time.is_monotonic:
             raise ValueError('Click test in train must be monotonic')
 
-        if df_train.click_time[len(df_train) - 1] > df_valid.click_time[0]:
-            raise ValueError("Train's timestamp must be smaller than valid's ones")
-
-        if df_valid.click_time[len(df_valid) - 1] > df_test.click_time[0]:
-            raise ValueError("Valid's timestamp must be smaller than test's ones")
+        if df_train.click_time[len(df_train) - 1] > df_test.click_time[0]:
+            raise ValueError("Train's timestamp must be smaller than test's ones")
 
 
 def generate_future_interval_count(window_size):
@@ -37,9 +31,9 @@ def generate_future_interval_count(window_size):
         def categorical_features():
             return []
 
-        def create_features_from_dataframe(self, df_train: pd.DataFrame, df_valid: pd.DataFrame, df_test: pd.DataFrame):
-            self.validate_timestamps(df_train, df_valid, df_test)
-            data: pd.DataFrame = pd.concat([df_train, df_valid, df_test])
+        def create_features_from_dataframe(self, df_train: pd.DataFrame, df_test: pd.DataFrame):
+            self.validate_timestamps(df_train, df_test)
+            data: pd.DataFrame = pd.concat([df_train, df_test])
             data.reset_index(drop=True, inplace=True)
             data['click_time'] = data.click_time.astype(np.int64) // 10 ** 9
 
@@ -62,12 +56,10 @@ def generate_future_interval_count(window_size):
                 features_df['fic-{}-{}'.format(feature, window_size)] = feature_values
             features_train = features_df[:len(df_train)]
             features_train.index = df_train.index
-            features_valid = features_df[len(df_train):len(df_train) + len(df_valid)]
-            features_valid.index = df_valid.index
             features_test = features_df[len(df_train) + len(df_valid):]
             features_test.index = df_test.index
             print(features_df.head())
-            return features_train, features_valid, features_test
+            return features_train, features_test
 
     return FutureIntervalCountSimple
 
@@ -119,9 +111,9 @@ def generate_past_interval_count(window_size):
 
 def generate_future_click_count(window_size_in_seconds):
     class FutureClickCount(FeatherFeature):
-        def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
-            args = [os.path.join(os.path.dirname(__file__), '../cpp/future_click_count_main'), train_input, valid_input,
-                    test_input, train_output, valid_output, test_output, str(window_size_in_seconds)]
+        def create_features_impl(self, train_path, valid_input, test_path, train_output, valid_output, test_feature_path):
+            args = [os.path.join(os.path.dirname(__file__), '../cpp/future_click_count_main'), train_path, valid_input,
+                    test_path, train_output, valid_output, test_feature_path, str(window_size_in_seconds)]
             subprocess.call(args)
 
         @staticmethod
@@ -137,9 +129,9 @@ def generate_future_click_count(window_size_in_seconds):
 
 def generate_future_click_ratio(window_size_in_seconds):
     class FutureClickRatio(FeatherFeature):
-        def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
-            args = [os.path.join(os.path.dirname(__file__), '../cpp/future_click_ratio_main'), train_input, valid_input,
-                    test_input, train_output, valid_output, test_output, str(window_size_in_seconds)]
+        def create_features_impl(self, train_path, valid_input, test_path, train_output, valid_output, test_feature_path):
+            args = [os.path.join(os.path.dirname(__file__), '../cpp/future_click_ratio_main'), train_path, valid_input,
+                    test_path, train_output, valid_output, test_feature_path, str(window_size_in_seconds)]
             subprocess.call(args)
 
         @staticmethod
@@ -155,9 +147,9 @@ def generate_future_click_ratio(window_size_in_seconds):
 
 def generate_past_click_count(window_size_in_seconds):
     class PastClickCount(FeatherFeature):
-        def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
-            args = [os.path.join(os.path.dirname(__file__), '../cpp/past_click_count_main'), train_input, valid_input,
-                    test_input, train_output, valid_output, test_output, str(window_size_in_seconds)]
+        def create_features_impl(self, train_path, valid_input, test_path, train_output, valid_output, test_feature_path):
+            args = [os.path.join(os.path.dirname(__file__), '../cpp/past_click_count_main'), train_path, valid_input,
+                    test_path, train_output, valid_output, test_feature_path, str(window_size_in_seconds)]
             subprocess.call(args)
 
         @staticmethod
@@ -173,9 +165,9 @@ def generate_past_click_count(window_size_in_seconds):
 
 def generate_past_click_ratio(window_size_in_seconds):
     class PastClickRatio(FeatherFeature):
-        def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
-            args = [os.path.join(os.path.dirname(__file__), '../cpp/past_click_ratio_main'), train_input, valid_input,
-                    test_input, train_output, valid_output, test_output, str(window_size_in_seconds)]
+        def create_features_impl(self, train_path, valid_input, test_path, train_output, valid_output, test_feature_path):
+            args = [os.path.join(os.path.dirname(__file__), '../cpp/past_click_ratio_main'), train_path, valid_input,
+                    test_path, train_output, valid_output, test_feature_path, str(window_size_in_seconds)]
             subprocess.call(args)
 
         @staticmethod
@@ -190,9 +182,9 @@ def generate_past_click_ratio(window_size_in_seconds):
 
 
 class NextClickTimeDelta(FeatherFeature):
-    def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
-        args = [os.path.join(os.path.dirname(__file__), '../cpp/next_click_time_delta_main'), train_input, valid_input,
-                test_input, train_output, valid_output, test_output]
+    def create_features_impl(self, train_path, valid_input, test_path, train_output, valid_output, test_feature_path):
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/next_click_time_delta_main'), train_path, valid_input,
+                test_path, train_output, valid_output, test_feature_path]
         subprocess.call(args)
 
     @staticmethod
@@ -201,9 +193,9 @@ class NextClickTimeDelta(FeatherFeature):
 
 
 class PrevClickTimeDelta(FeatherFeature):
-    def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
-        args = [os.path.join(os.path.dirname(__file__), '../cpp/prev_click_time_delta_main'), train_input, valid_input,
-                test_input, train_output, valid_output, test_output]
+    def create_features_impl(self, train_path, valid_input, test_path, train_output, valid_output, test_feature_path):
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/prev_click_time_delta_main'), train_path, valid_input,
+                test_path, train_output, valid_output, test_feature_path]
         subprocess.call(args)
 
     @staticmethod
@@ -212,9 +204,9 @@ class PrevClickTimeDelta(FeatherFeature):
 
 
 class NextClickTimeDeltaV2(FeatherFeature):
-    def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
-        args = [os.path.join(os.path.dirname(__file__), '../cpp/next_click_time_delta_v2_main'), train_input,
-                valid_input, test_input, train_output, valid_output, test_output]
+    def create_features_impl(self, train_path, valid_input, test_path, train_output, valid_output, test_feature_path):
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/next_click_time_delta_v2_main'), train_path,
+                valid_input, test_path, train_output, valid_output, test_feature_path]
         subprocess.call(args)
 
     @staticmethod
@@ -223,9 +215,9 @@ class NextClickTimeDeltaV2(FeatherFeature):
 
 
 class PrevClickTimeDeltaV2(FeatherFeature):
-    def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
-        args = [os.path.join(os.path.dirname(__file__), '../cpp/prev_click_time_delta_v2_main'), train_input,
-                valid_input, test_input, train_output, valid_output, test_output]
+    def create_features_impl(self, train_path, valid_input, test_path, train_output, valid_output, test_feature_path):
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/prev_click_time_delta_v2_main'), train_path,
+                valid_input, test_path, train_output, valid_output, test_feature_path]
         subprocess.call(args)
 
     @staticmethod
@@ -234,9 +226,9 @@ class PrevClickTimeDeltaV2(FeatherFeature):
 
 
 class NextClickTimeDeltaV3(FeatherFeature):
-    def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
-        args = [os.path.join(os.path.dirname(__file__), '../cpp/next_click_time_delta_v3_main'), train_input,
-                valid_input, test_input, train_output, valid_output, test_output]
+    def create_features_impl(self, train_path, valid_input, test_path, train_output, valid_output, test_feature_path):
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/next_click_time_delta_v3_main'), train_path,
+                valid_input, test_path, train_output, valid_output, test_feature_path]
         subprocess.call(args)
 
     @staticmethod
@@ -245,9 +237,9 @@ class NextClickTimeDeltaV3(FeatherFeature):
 
 
 class PrevClickTimeDeltaV3(FeatherFeature):
-    def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
-        args = [os.path.join(os.path.dirname(__file__), '../cpp/prev_click_time_delta_v3_main'), train_input,
-                valid_input, test_input, train_output, valid_output, test_output]
+    def create_features_impl(self, train_path, valid_input, test_path, train_output, valid_output, test_feature_path):
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/prev_click_time_delta_v3_main'), train_path,
+                valid_input, test_path, train_output, valid_output, test_feature_path]
         subprocess.call(args)
 
     @staticmethod
@@ -256,9 +248,9 @@ class PrevClickTimeDeltaV3(FeatherFeature):
 
 
 class ExactSameClick(FeatherFeature):
-    def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
-        args = [os.path.join(os.path.dirname(__file__), '../cpp/exact_same_click_main'), train_input, valid_input,
-                test_input, train_output, valid_output, test_output]
+    def create_features_impl(self, train_path, valid_input, test_path, train_output, valid_output, test_feature_path):
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/exact_same_click_main'), train_path, valid_input,
+                test_path, train_output, valid_output, test_feature_path]
         subprocess.call(args)
 
     @staticmethod
@@ -267,9 +259,9 @@ class ExactSameClick(FeatherFeature):
 
 
 class ExactSameClickId(FeatherFeature):
-    def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
-        args = [os.path.join(os.path.dirname(__file__), '../cpp/exact_same_click_id_main'), train_input, valid_input,
-                test_input, train_output, valid_output, test_output]
+    def create_features_impl(self, train_path, valid_input, test_path, train_output, valid_output, test_feature_path):
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/exact_same_click_id_main'), train_path, valid_input,
+                test_path, train_output, valid_output, test_feature_path]
         subprocess.call(args)
 
     @staticmethod
@@ -278,9 +270,9 @@ class ExactSameClickId(FeatherFeature):
 
 
 class AllClickCount(FeatherFeature):
-    def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
-        args = [os.path.join(os.path.dirname(__file__), '../cpp/all_click_count_main'), train_input, valid_input,
-                test_input, train_output, valid_output, test_output]
+    def create_features_impl(self, train_path, valid_input, test_path, train_output, valid_output, test_feature_path):
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/all_click_count_main'), train_path, valid_input,
+                test_path, train_output, valid_output, test_feature_path]
         subprocess.call(args)
 
     @staticmethod
@@ -289,10 +281,10 @@ class AllClickCount(FeatherFeature):
 
 
 class AverageAttributedRatio(FeatherFeature):
-    def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
-        args = [os.path.join(os.path.dirname(__file__), '../cpp/average_attributed_ratio_main'), train_input,
+    def create_features_impl(self, train_path, valid_input, test_path, train_output, valid_output, test_feature_path):
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/average_attributed_ratio_main'), train_path,
                 valid_input,
-                test_input, train_output, valid_output, test_output]
+                test_path, train_output, valid_output, test_feature_path]
         subprocess.call(args)
 
     @staticmethod
@@ -301,10 +293,10 @@ class AverageAttributedRatio(FeatherFeature):
 
 
 class CumulativeClickCount(FeatherFeature):
-    def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
-        args = [os.path.join(os.path.dirname(__file__), '../cpp/cumulative_click_count_main'), train_input,
+    def create_features_impl(self, train_path, valid_input, test_path, train_output, valid_output, test_feature_path):
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/cumulative_click_count_main'), train_path,
                 valid_input,
-                test_input, train_output, valid_output, test_output]
+                test_path, train_output, valid_output, test_feature_path]
         subprocess.call(args)
 
     @staticmethod
@@ -313,10 +305,10 @@ class CumulativeClickCount(FeatherFeature):
 
 
 class CumulativeClickCountFuture(FeatherFeature):
-    def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
-        args = [os.path.join(os.path.dirname(__file__), '../cpp/cumulative_click_count_future_main'), train_input,
+    def create_features_impl(self, train_path, valid_input, test_path, train_output, valid_output, test_feature_path):
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/cumulative_click_count_future_main'), train_path,
                 valid_input,
-                test_input, train_output, valid_output, test_output]
+                test_path, train_output, valid_output, test_feature_path]
         subprocess.call(args)
 
     @staticmethod
@@ -325,10 +317,10 @@ class CumulativeClickCountFuture(FeatherFeature):
 
 
 class NextApp(FeatherFeature):
-    def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
-        args = [os.path.join(os.path.dirname(__file__), '../cpp/next_app_main'), train_input,
+    def create_features_impl(self, train_path, valid_input, test_path, train_output, valid_output, test_feature_path):
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/next_app_main'), train_path,
                 valid_input,
-                test_input, train_output, valid_output, test_output]
+                test_path, train_output, valid_output, test_feature_path]
         subprocess.call(args)
 
     @staticmethod
@@ -337,10 +329,10 @@ class NextApp(FeatherFeature):
 
 
 class PrevApp(FeatherFeature):
-    def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
-        args = [os.path.join(os.path.dirname(__file__), '../cpp/prev_app_main'), train_input,
+    def create_features_impl(self, train_path, valid_input, test_path, train_output, valid_output, test_feature_path):
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/prev_app_main'), train_path,
                 valid_input,
-                test_input, train_output, valid_output, test_output]
+                test_path, train_output, valid_output, test_feature_path]
         subprocess.call(args)
 
     @staticmethod
@@ -349,10 +341,10 @@ class PrevApp(FeatherFeature):
 
 
 class NextChannel(FeatherFeature):
-    def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
-        args = [os.path.join(os.path.dirname(__file__), '../cpp/next_channel_main'), train_input,
+    def create_features_impl(self, train_path, valid_input, test_path, train_output, valid_output, test_feature_path):
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/next_channel_main'), train_path,
                 valid_input,
-                test_input, train_output, valid_output, test_output]
+                test_path, train_output, valid_output, test_feature_path]
         subprocess.call(args)
 
     @staticmethod
@@ -361,10 +353,10 @@ class NextChannel(FeatherFeature):
 
 
 class PrevChannel(FeatherFeature):
-    def create_features_impl(self, train_input, valid_input, test_input, train_output, valid_output, test_output):
-        args = [os.path.join(os.path.dirname(__file__), '../cpp/prev_channel_main'), train_input,
+    def create_features_impl(self, train_path, valid_input, test_path, train_output, valid_output, test_feature_path):
+        args = [os.path.join(os.path.dirname(__file__), '../cpp/prev_channel_main'), train_path,
                 valid_input,
-                test_input, train_output, valid_output, test_output]
+                test_path, train_output, valid_output, test_feature_path]
         subprocess.call(args)
 
     @staticmethod

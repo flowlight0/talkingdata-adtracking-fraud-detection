@@ -1,19 +1,19 @@
 import argparse
+import gc
 import itertools
 import json
 import os
 import time
-import gc
 from typing import List, Tuple
 
-import numpy as np
 import pandas as pd
 import pandas.testing
 
 import features.time_series_click
 from features import Feature
-from features.basic import Ip, App, Os, Device, Channel, ClickHour, BasicCount
+from features.basic import Ip, App, Os, Device, Channel, ClickHour, BasicCount, IsAttributed
 from models import LightGBM, Model
+from utils import dump_json_log
 
 feature_map = {
     'ip': Ip,
@@ -23,6 +23,7 @@ feature_map = {
     'channel': Channel,
     'hour': ClickHour,
     'count': BasicCount,
+    'is_attributed': IsAttributed,
     'future_click_count_1': features.time_series_click.generate_future_click_count(60),
     'future_click_count_10': features.time_series_click.generate_future_click_count(600),
     'past_click_count_10': features.time_series_click.generate_past_click_count(600),
@@ -38,12 +39,12 @@ feature_map = {
     'prev_click_time_delta_v2': features.time_series_click.PrevClickTimeDeltaV2,
     'next_click_time_delta_v3': features.time_series_click.NextClickTimeDeltaV3,
     'prev_click_time_delta_v3': features.time_series_click.PrevClickTimeDeltaV3,
-    'exact_same_click': features.time_series_click.ExactSameClick, # It will be duplicated with all id counts
+    'exact_same_click': features.time_series_click.ExactSameClick,  # It will be duplicated with all id counts
     'exact_same_click_id': features.time_series_click.ExactSameClickId,
     'all_click_count': features.time_series_click.AllClickCount,
     'average_attributed_ratio': features.time_series_click.AverageAttributedRatio,
     'cumulative_click_count': features.time_series_click.CumulativeClickCount,
-    'cumulative_click_count_future':  features.time_series_click.CumulativeClickCountFuture,
+    'cumulative_click_count_future': features.time_series_click.CumulativeClickCountFuture,
     'next_channel': features.time_series_click.NextChannel,
     'prev_channel': features.time_series_click.PrevChannel,
     'next_app': features.time_series_click.NextApp,
@@ -59,25 +60,7 @@ output_directory = 'data/output'
 target_variable = 'is_attributed'
 
 
-def get_click_id_(path) -> pd.Series:
-    return pd.read_feather(path)[['click_id']].astype('int32')
-
-
-def get_click_id(config) -> pd.Series:
-    return get_click_id_(get_dataset_filename(config, 'test_full'))
-
-
-def get_target_(path, index=None) -> pd.Series:
-    if index is None:
-        return pd.read_feather(path)[[target_variable]]
-    else:
-        return pd.read_feather(path).loc[index, [target_variable]]
-
-
-def get_target(config, dataset_type: str, index=None) -> pd.Series:
-    return get_target_(get_dataset_filename(config, dataset_type), index)
-
-
+# Now we don't set index when loading training features because they should have been already down-sampled.
 def load_dataset(paths, index=None) -> pd.DataFrame:
     assert len(paths) > 0
 
@@ -100,54 +83,7 @@ def get_dataset_filename(config, dataset_type: str) -> str:
     return os.path.join(config['dataset']['input_directory'], config['dataset']['files'][dataset_type])
 
 
-def load_datasets(config, random_state) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    feature_list = get_feature_list(config)
-    assert len(feature_list) > 0
-
-    train_path = get_dataset_filename(config, 'train')
-    valid_path = get_dataset_filename(config, 'valid')
-    test_path = get_dataset_filename(config, 'test_full')
-
-    feature_path_lists = [feature.create_features(train_path, valid_path, test_path) for feature in feature_list]
-    train_paths = [feature_path_list[0] for feature_path_list in feature_path_lists]
-    valid_paths = [feature_path_list[1] for feature_path_list in feature_path_lists]
-
-    train_index= negative_down_sampling(train_path, random_state=random_state)
-    valid_index = negative_down_sampling(valid_path, random_state=random_state)
-    gc.collect()
-    train = load_dataset(train_paths, train_index)
-    gc.collect()
-    valid = load_dataset(valid_paths, valid_index)
-    gc.collect()
-    train[target_variable] = get_target(config, 'train', train_index)
-    valid[target_variable] = get_target(config, 'valid', valid_index)
-    return train, valid
-
-
-def load_categorical_features(config) -> List[str]:
-    return list(itertools.chain(*[feature_map[feature].categorical_features() for feature in config['features']]))
-
-
-def dump_json_log(options, train_results):
-    config = json.load(open(options.config))
-    results = {
-        'training': {
-            'trials': train_results,
-            'average_train_auc': np.mean([result['train_auc'] for result in train_results]),
-            'average_valid_auc': np.mean([result['valid_auc'] for result in train_results]),
-            'train_auc_std': np.std([result['train_auc'] for result in train_results]),
-            'valid_auc_std': np.std([result['valid_auc'] for result in train_results]),
-            'average_train_time': np.mean([result['train_time'] for result in train_results])
-        },
-        'config': config,
-    }
-    log_path = os.path.join(os.path.dirname(__file__), output_directory,
-                            os.path.basename(options.config) + '.result.json')
-    json.dump(results, open(log_path, 'w'), indent=2)
-
-
-def negative_down_sampling(data_path, random_state):
-    data = pd.read_feather(data_path)
+def negative_down_sampling(data: pd.DataFrame, random_state: int):
     positive_data = data[data[target_variable] == 1]
     positive_ratio = float(len(positive_data)) / len(data)
     negative_data = data[data[target_variable] == 0].sample(
@@ -155,29 +91,57 @@ def negative_down_sampling(data_path, random_state):
     return positive_data.index.union(negative_data.index).sort_values()
 
 
-def load_test_dataset(config, id_mapper):
-    ids_we_need = set(id_mapper['old_click_id'])
-    feature_list = get_feature_list(config)
-    assert len(feature_list) > 0
-    train_path = get_dataset_filename(config, 'train')
-    valid_path = get_dataset_filename(config, 'valid')
-    test_path = get_dataset_filename(config, 'test_full')
-    feature_path_lists = [feature.create_features(train_path, valid_path, test_path) for feature in feature_list]
-    test_feature_paths = [feature_path_list[2] for feature_path_list in feature_path_lists]
+def get_feature_list(config) -> List[Feature]:
+    cache_dir: str = config['dataset']['cache_directory']
+    for feature in config['features']:
+        assert feature in feature_map, "Unknown feature {}".format(feature)
+    features = config['features']
+    features.append(target_variable)
+    return [feature_map[feature](cache_dir) for feature in features]
 
+
+def load_features(config, random_states: List[int]) -> Tuple[List[List[str]], List[str]]:
+    train_path = get_dataset_filename(config, 'train')
+    train_data = pd.read_feather(train_path)
+    test_path = get_dataset_filename(config, 'test')
+    feature_list = get_feature_list(config)
+    train_feature_paths_lists = [[] for _ in random_states]
+    test_feature_paths = []
+
+    random_states_ = []
+    for random_state in random_states:
+        train_index = negative_down_sampling(train_data, random_state=random_state)
+        random_states_.append((random_state, train_index))
+
+    for feature in feature_list:
+        train_feature_path_list, test_feature_path = \
+            feature.create_features(train_path, test_path, random_states=random_states_)
+        for i, train_feature_path in enumerate(train_feature_path_list):
+            train_feature_paths_lists[i].append(train_feature_path)
+        test_feature_paths.append(test_feature_path)
+    return train_feature_paths_lists, test_feature_paths
+
+
+def load_categorical_features(config) -> List[str]:
+    return list(itertools.chain(*[feature_map[feature].categorical_features() for feature in config['features']]))
+
+
+def load_test_dataset(test_path: str, test_feature_paths: List[str], id_mapper: pd.DataFrame) -> pd.DataFrame:
+    assert len(test_feature_paths) > 0
+    required_ids = set(id_mapper['old_click_id'])
     df_test = pd.read_feather(test_path)
-    df_test = df_test[df_test.click_id.isin(ids_we_need)]
+    df_test = df_test[df_test.click_id.isin(required_ids)]
     test = load_dataset(test_feature_paths, df_test.index)
     test['click_id'] = df_test.click_id
     return test
 
 
-def get_feature_list(config):
-    cache_dir: str = config['dataset']['cache_directory']
-    for feature in config['features']:
-        assert feature in feature_map, "Unknown feature {}".format(feature)
-    feature_list: List[Feature] = [feature_map[feature](cache_dir) for feature in config['features']]
-    return feature_list
+def load_train_dataset(train_feature_paths: List[str]) -> pd.DataFrame:
+    assert len(train_feature_paths) > 0
+    print(train_feature_paths)
+    df_train = load_dataset(train_feature_paths)
+    assert 'is_attributed' in df_train.columns
+    return df_train
 
 
 def main():
@@ -188,22 +152,30 @@ def main():
     assert config['model']['name'] in models  # check model's existence before getting datasets
 
     id_mapper_file = 'data/working/id_mapping.feather'
-    assert os.path.exists(id_mapper_file), "Please download {} from s3 before running this script".format(id_mapper_file)
+    assert os.path.exists(id_mapper_file), "Please download {} from s3 before running this script".format(
+        id_mapper_file)
     id_mapper = pd.read_feather(id_mapper_file)
-    test_data = load_test_dataset(config, id_mapper)
 
-    categorical_features = load_categorical_features(config)
     model: Model = models[config['model']['name']]()
     predictions = []
     train_results = []
+    categorical_features = load_categorical_features(config)
     negative_down_sampling_config = config['dataset']['negative_down_sampling']
 
     if not negative_down_sampling_config['enabled']:
         raise NotImplementedError("We should always downsample")
 
-    for i in range(negative_down_sampling_config['bagging_size']):
+    sampled_train_feature_paths_list, test_feathre_paths = \
+        load_features(config, list(range(negative_down_sampling_config['bagging_size'])))
+
+    test_data = load_test_dataset(get_dataset_filename(config, 'test'), test_feathre_paths, id_mapper)
+    for i, sampled_train_feature_paths in enumerate(sampled_train_feature_paths_list):
         start_time = time.time()
-        sampled_train_data, sampled_valid_data = load_datasets(config, random_state=i)
+        valid_ratio = 0.9
+        sampled_train_dataset = load_train_dataset(sampled_train_feature_paths)
+        train_length = int(len(sampled_train_dataset) * valid_ratio)
+        sampled_train_data = sampled_train_dataset[:train_length]
+        sampled_valid_data = sampled_train_dataset[train_length:]
         predictors = sampled_train_data.columns.drop(target_variable)
         booster, result = model.train_and_predict(train=sampled_train_data,
                                                   valid=sampled_valid_data,
@@ -227,7 +199,8 @@ def main():
                 'test': test_prediction_elapsed_time,
                 'valid': valid_prediction_elapsed_time
             },
-            'feature_importance': {name: int(score) for name, score in zip(booster.feature_name(), booster.feature_importance())}
+            'feature_importance': {name: int(score) for name, score in
+                                   zip(booster.feature_name(), booster.feature_importance())}
         })
         print("Finished processing {}-th bag: {}".format(i, str(train_results[-1])))
 
@@ -244,9 +217,10 @@ def main():
         click_ids.append(new_click_id)
         predictions.append(old_click_to_prediction[old_click_id])
     submission = pd.DataFrame({'click_id': click_ids, '{}'.format(target_variable): predictions})
-    submission_path = os.path.join(os.path.dirname(__file__), output_directory, os.path.basename(options.config) + '.submission.csv')
+    submission_path = os.path.join(os.path.dirname(__file__), output_directory,
+                                   os.path.basename(options.config) + '.submission.csv')
     submission.sort_values(by='click_id').to_csv(submission_path, index=False)
-    dump_json_log(options, train_results)
+    dump_json_log(options, train_results, output_directory)
 
 
 if __name__ == "__main__":
