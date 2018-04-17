@@ -1,5 +1,6 @@
 import gc
 
+import numpy as np
 import pandas as pd
 
 from features import FeatherFeatureDF
@@ -10,8 +11,8 @@ class Ip(FeatherFeatureDF):
     def categorical_features():
         return ['ip']
 
-    def create_features_from_dataframe(self, df_train: pd.DataFrame, df_valid: pd.DataFrame, df_test: pd.DataFrame):
-        return df_train[['ip']], df_valid[['ip']], df_test[['ip']]
+    def create_features_from_dataframe(self, df_train: pd.DataFrame, df_test: pd.DataFrame):
+        return df_train[['ip']], df_test[['ip']]
 
 
 class App(FeatherFeatureDF):
@@ -19,8 +20,8 @@ class App(FeatherFeatureDF):
     def categorical_features():
         return ['app']
 
-    def create_features_from_dataframe(self, df_train: pd.DataFrame, df_valid: pd.DataFrame, df_test: pd.DataFrame):
-        return df_train[['app']], df_valid[['app']], df_test[['app']]
+    def create_features_from_dataframe(self, df_train: pd.DataFrame, df_test: pd.DataFrame):
+        return df_train[['app']], df_test[['app']]
 
 
 class Os(FeatherFeatureDF):
@@ -28,8 +29,8 @@ class Os(FeatherFeatureDF):
     def categorical_features():
         return ['os']
 
-    def create_features_from_dataframe(self, df_train: pd.DataFrame, df_valid: pd.DataFrame, df_test: pd.DataFrame):
-        return df_train[['os']], df_valid[['os']], df_test[['os']]
+    def create_features_from_dataframe(self, df_train: pd.DataFrame, df_test: pd.DataFrame):
+        return df_train[['os']], df_test[['os']]
 
 
 class Channel(FeatherFeatureDF):
@@ -37,8 +38,8 @@ class Channel(FeatherFeatureDF):
     def categorical_features():
         return ['channel']
 
-    def create_features_from_dataframe(self, df_train: pd.DataFrame, df_valid: pd.DataFrame, df_test: pd.DataFrame):
-        return df_train[['channel']], df_valid[['channel']], df_test[['channel']]
+    def create_features_from_dataframe(self, df_train: pd.DataFrame, df_test: pd.DataFrame):
+        return df_train[['channel']], df_test[['channel']]
 
 
 class ClickHour(FeatherFeatureDF):
@@ -47,11 +48,10 @@ class ClickHour(FeatherFeatureDF):
         # We don't use 'day' information because time span of our dataset is too short
         return ['hour']
 
-    def create_features_from_dataframe(self, df_train: pd.DataFrame, df_valid: pd.DataFrame, df_test: pd.DataFrame):
+    def create_features_from_dataframe(self, df_train: pd.DataFrame, df_test: pd.DataFrame):
         df_train['hour'] = pd.to_datetime(df_train.click_time).dt.hour.astype('uint8')
-        df_valid['hour'] = pd.to_datetime(df_valid.click_time).dt.hour.astype('uint8')
         df_test['hour'] = pd.to_datetime(df_test.click_time).dt.hour.astype('uint8')
-        return df_train[['hour']], df_valid[['hour']], df_test[['hour']]
+        return df_train[['hour']], df_test[['hour']]
 
 
 class BasicCount(FeatherFeatureDF):
@@ -59,9 +59,9 @@ class BasicCount(FeatherFeatureDF):
     def categorical_features():
         return []
 
-    def create_features_from_dataframe(self, df_train: pd.DataFrame, df_valid: pd.DataFrame, df_test: pd.DataFrame):
+    def create_features_from_dataframe(self, df_train: pd.DataFrame, df_test: pd.DataFrame):
         print("Creating new count features: 'n_channels', 'ip_app_count', 'ip_app_os_count'...")
-        train: pd.DataFrame = pd.concat([df_train, df_valid, df_test])
+        train: pd.DataFrame = pd.concat([df_train, df_test])
         train['hour'] = pd.to_datetime(train.click_time).dt.hour.astype('uint8')
         train['day'] = pd.to_datetime(train.click_time).dt.day.astype('uint8')
         print(train.head(), train.shape)
@@ -92,9 +92,7 @@ class BasicCount(FeatherFeatureDF):
         gc.collect()
 
         features = train[['n_channels', 'ip_app_count', 'ip_app_os_count']]
-        return features[:len(df_train)].reset_index(drop=True), \
-               features[len(df_train): len(df_train) + len(df_valid)].reset_index(drop=True), \
-               features[len(df_train) + len(df_valid):].reset_index(drop=True)
+        return features[:len(df_train)].reset_index(drop=True), features[len(df_train):].reset_index(drop=True)
 
 
 class Device(FeatherFeatureDF):
@@ -102,6 +100,16 @@ class Device(FeatherFeatureDF):
     def categorical_features():
         return ['device']
 
-    def create_features_from_dataframe(self, df_train: pd.DataFrame, df_valid: pd.DataFrame, df_test: pd.DataFrame):
-        return df_train[['device']], df_valid[['device']], df_test[['device']]
+    def create_features_from_dataframe(self, df_train: pd.DataFrame, df_test: pd.DataFrame):
+        return df_train[['device']], df_test[['device']]
+
+
+class IsAttributed(FeatherFeatureDF):
+    @staticmethod
+    def categorical_features():
+        return ['is_attributed']
+
+    def create_features_from_dataframe(self, df_train: pd.DataFrame, df_test: pd.DataFrame):
+        df_test['is_attributed'] = np.zeros(len(df_test), dtype=np.uint8)
+        return df_train[['is_attributed']], df_test[['is_attributed']]
 

@@ -57,13 +57,13 @@ private:
 int main(int argc, char **argv)
 {
 
-  if (argc != 8) {
-    fprintf(stderr, "Usage: %s (input_train_feather) (input_valid_feather) (input_test_feather)"
-            " (output_train_feather) (output_valid_feather) (output_test_feather) (window_size_in_seconds)\n", argv[0]);
+  if (argc != 6) {
+    fprintf(stderr, "Usage: %s (input_train_feather) (input_test_feather)"
+            " (output_train_feather) (output_test_feather) (window_size_in_seconds)\n", argv[0]);
     exit(-1);
   }
   
-  FutureClickCount feature_calculator(atoi(argv[7]));
-  arrow::Status status =feature_calculator.calculate(argv[1], argv[2], argv[3], argv[4], argv[5], argv[6]);
+  FutureClickCount feature_calculator(atoi(argv[5]));
+  arrow::Status status =feature_calculator.calculate(argv[1], argv[2], argv[3], argv[4]);
   assert(status.ok());
 }

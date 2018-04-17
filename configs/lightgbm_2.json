@@ -4,11 +4,13 @@
     "os",
     "app",
     "channel",
-    "device",
     "hour",
     "count",
     "future_click_count_10",
-    "future_click_count_80"
+    "future_click_count_80",
+    "next_click_time_delta",
+    "prev_click_time_delta",
+    "average_attributed_ratio"
   ],
   "model": {
     "name": "lightgbm",
@@ -40,14 +42,12 @@
     "input_directory": "data/input/",
     "cache_directory": "data/working/",
     "files": {
-      "train": "train_0.feather",
-      "valid": "valid_0.feather",
-      "test_full": "old_test.feather",
-      "test_submission": "test.feather"
+      "train": "train.feather",
+      "test": "old_test.feather"
     },
     "negative_down_sampling": {
       "enabled": true,
-      "bagging_size": 1,
+      "bagging_size": 5,
       "random_state": 114514
     }
   }

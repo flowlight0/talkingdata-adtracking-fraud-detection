@@ -2,7 +2,6 @@ from typing import List, Tuple
 
 import lightgbm as lgb
 import pandas as pd
-import time
 from lightgbm import Booster
 
 from models.base import Model
