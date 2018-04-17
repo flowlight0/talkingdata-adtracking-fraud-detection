@@ -16,7 +16,7 @@ class Feature(ABC):
         return self.__class__.__name__
 
     @abstractmethod
-    def create_features(self, train_path: str, test_path: str, random_states: List[Tuple[int, pd.Index]]) -> (List[str], str):
+    def create_features(self, train_path: str, test_path: str, random_states: List[Tuple[int, pd.Index]]) -> Tuple[List[str], str]:
         raise NotImplementedError
 
     @staticmethod

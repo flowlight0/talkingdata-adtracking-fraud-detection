@@ -22,10 +22,8 @@ class FeatherFeatureCalculator {
   }
 
   virtual arrow::Status calculate(const std::string &train_input_path,
-                                  const std::string &valid_input_path,
                                   const std::string &test_input_,
                                   const std::string &train_ouptut_path,
-                                  const std::string &valid_ouptut_path,
                                   const std::string &test_ouptut_path) = 0;
   virtual std::string name() = 0;
   
@@ -103,7 +101,6 @@ class FeatherFeatureCalculator {
   std::vector<uint64_t> click_time;
   std::vector<uint8_t> is_attributed;
   uint64_t train_size;
-  uint64_t valid_size;
   uint64_t test_size;
   
 };
@@ -111,10 +108,8 @@ class FeatherFeatureCalculator {
 template <typename TargetType, typename TargetArrowType> class GroupedFeatureCalculator :  public FeatherFeatureCalculator {
  public:
   virtual arrow::Status calculate(const std::string &train_input_path,
-                                  const std::string &valid_input_path,
                                   const std::string &test_input_path,
                                   const std::string &train_output_path,
-                                  const std::string &valid_output_path,
                                   const std::string &test_output_path)
   {
     assert(ip.empty());
@@ -124,10 +119,10 @@ template <typename TargetType, typename TargetArrowType> class GroupedFeatureCal
     assert(channel.empty());
     assert(click_time.empty());
 
-    const int input_size = 3;
-    std::vector<std::string> input_paths = { train_input_path, valid_input_path, test_input_path };
-    std::vector<std::string> output_paths = { train_output_path, valid_output_path, test_output_path };
-    std::vector<std::string> read_messages = { "Read train table", "Read validation table", "Read test table" };
+    const int input_size = 2;
+    std::vector<std::string> input_paths = { train_input_path, test_input_path };
+    std::vector<std::string> output_paths = { train_output_path, test_output_path };
+    std::vector<std::string> read_messages = { "Read train table", "Read test table" };
     std::vector<int64_t> sizes;
     for (int i = 0; i < input_size; i++) {
       sizes.push_back(read_single_feather_file_with_stopwatch(read_messages[i], input_paths[i]));

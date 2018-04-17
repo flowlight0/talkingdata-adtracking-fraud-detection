@@ -4,6 +4,8 @@ import itertools
 import json
 import os
 import time
+from functools import partial
+from multiprocessing.pool import Pool
 from typing import List, Tuple
 
 import pandas as pd
@@ -35,20 +37,20 @@ feature_map = {
     'past_click_ratio_80': features.time_series_click.generate_future_click_ratio(4800),
     'next_click_time_delta': features.time_series_click.NextClickTimeDelta,
     'prev_click_time_delta': features.time_series_click.PrevClickTimeDelta,
-    'next_click_time_delta_v2': features.time_series_click.NextClickTimeDeltaV2,
-    'prev_click_time_delta_v2': features.time_series_click.PrevClickTimeDeltaV2,
-    'next_click_time_delta_v3': features.time_series_click.NextClickTimeDeltaV3,
-    'prev_click_time_delta_v3': features.time_series_click.PrevClickTimeDeltaV3,
+    # 'next_click_time_delta_v2': features.time_series_click.NextClickTimeDeltaV2,
+    # 'prev_click_time_delta_v2': features.time_series_click.PrevClickTimeDeltaV2,
+    # 'next_click_time_delta_v3': features.time_series_click.NextClickTimeDeltaV3,
+    # 'prev_click_time_delta_v3': features.time_series_click.PrevClickTimeDeltaV3,
     'exact_same_click': features.time_series_click.ExactSameClick,  # It will be duplicated with all id counts
     'exact_same_click_id': features.time_series_click.ExactSameClickId,
     'all_click_count': features.time_series_click.AllClickCount,
     'average_attributed_ratio': features.time_series_click.AverageAttributedRatio,
     'cumulative_click_count': features.time_series_click.CumulativeClickCount,
     'cumulative_click_count_future': features.time_series_click.CumulativeClickCountFuture,
-    'next_channel': features.time_series_click.NextChannel,
-    'prev_channel': features.time_series_click.PrevChannel,
-    'next_app': features.time_series_click.NextApp,
-    'prev_app': features.time_series_click.PrevApp
+    # 'next_channel': features.time_series_click.NextChannel,
+    # 'prev_channel': features.time_series_click.PrevChannel,
+    # 'next_app': features.time_series_click.NextApp,
+    # 'prev_app': features.time_series_click.PrevApp
 }
 
 models = {
@@ -91,34 +93,45 @@ def negative_down_sampling(data: pd.DataFrame, random_state: int):
     return positive_data.index.union(negative_data.index).sort_values()
 
 
-def get_feature_list(config) -> List[Feature]:
-    cache_dir: str = config['dataset']['cache_directory']
+def get_feature_list(config) -> List[str]:
     for feature in config['features']:
         assert feature in feature_map, "Unknown feature {}".format(feature)
     features = config['features']
     features.append(target_variable)
-    return [feature_map[feature](cache_dir) for feature in features]
+    return features
+
+
+def get_feature(feature_name: str, config) -> Feature:
+    cache_dir: str = config['dataset']['cache_directory']
+    return feature_map[feature_name](cache_dir)
+
+
+def load_feature(feature_name: str, train_path: str, test_path: str, random_states_: List[Tuple[int, pd.Index]],
+                 config) -> Tuple[List[str], str]:
+    feature = get_feature(feature_name=feature_name, config=config)
+    return feature.create_features(train_path, test_path, random_states=random_states_)
 
 
 def load_features(config, random_states: List[int]) -> Tuple[List[List[str]], List[str]]:
-    train_path = get_dataset_filename(config, 'train')
-    train_data = pd.read_feather(train_path)
-    test_path = get_dataset_filename(config, 'test')
-    feature_list = get_feature_list(config)
+    tr_path = get_dataset_filename(config, 'train')
+    train_data = pd.read_feather(tr_path)
+    te_path = get_dataset_filename(config, 'test')
     train_feature_paths_lists = [[] for _ in random_states]
     test_feature_paths = []
 
-    random_states_ = []
+    rs = []
     for random_state in random_states:
         train_index = negative_down_sampling(train_data, random_state=random_state)
-        random_states_.append((random_state, train_index))
+        rs.append((random_state, train_index))
 
-    for feature in feature_list:
-        train_feature_path_list, test_feature_path = \
-            feature.create_features(train_path, test_path, random_states=random_states_)
-        for i, train_feature_path in enumerate(train_feature_path_list):
-            train_feature_paths_lists[i].append(train_feature_path)
-        test_feature_paths.append(test_feature_path)
+    # We fix the number of processes to four because of memory limitation
+    with Pool(4) as p:
+        res = p.map(partial(load_feature, train_path=tr_path, test_path=te_path, random_states_=rs, config=config),
+                    get_feature_list(config))
+        for tr_feature_path_list, te_feature_path in res:
+            for i, tr_feature_path in enumerate(tr_feature_path_list):
+                train_feature_paths_lists[i].append(tr_feature_path)
+            test_feature_paths.append(te_feature_path)
     return train_feature_paths_lists, test_feature_paths
 
 
