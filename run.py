@@ -144,9 +144,7 @@ def get_unparallelizable_feature_list(config) -> List[str]:
     for feature in config['features']:
         assert feature in parallelizable_feature_map or feature in unparallelizable_feature_map, \
             "Unknown feature {}".format(feature)
-    features = [feature for feature in config['features'] if feature in unparallelizable_feature_map]
-    features.append(target_variable)
-    return features
+    return [feature for feature in config['features'] if feature in unparallelizable_feature_map]
 
 
 def get_feature(feature_name: str, config) -> Feature:
@@ -160,8 +158,7 @@ def get_feature(feature_name: str, config) -> Feature:
 def load_feature(feature_name: str, train_path: str, test_path: str, sampler: DownSampler, config) -> Tuple[
     List[str], str]:
     feature = get_feature(feature_name=feature_name, config=config)
-    with simple_timer("Load random state indices"):
-        random_states_ = sampler.get_indices()
+    random_states_ = sampler.get_indices()
     return feature.create_features(train_path, test_path, random_states=random_states_)
 
 
@@ -258,30 +255,36 @@ def main():
         sampled_valid_data = sampled_train_dataset[train_length:]
         predictors = sampled_train_data.columns.drop(target_variable)
 
-        with simple_timer("Train model"):
+        with simple_timer("Train model with validation"):
             booster, result = model.train_and_predict(train=sampled_train_data,
                                                       valid=sampled_valid_data,
                                                       categorical_features=categorical_features,
                                                       target=target_variable,
                                                       params=config['model'])
+
+        sampled_train_data_with_fixed_iteration = sampled_train_dataset[len(sampled_train_dataset) - train_length:]
+
+        best_iteration = booster.best_iteration
+        with simple_timer("Train model without validation"):
+            booster = model.train_without_validation(train=sampled_train_data_with_fixed_iteration,
+                                                     categorical_features=categorical_features,
+                                                     target=target_variable,
+                                                     params=config['model'],
+                                                     best_iteration=best_iteration)
         with simple_timer("Create prediction"):
             test_prediction_start_time = time.time()
             prediction = booster.predict(test_data[predictors])
             test_prediction_elapsed_time = time.time() - test_prediction_start_time
-
-            valid_prediction_start_time = time.time()
-            valid_prediction_elapsed_time = time.time() - valid_prediction_start_time
             predictions.append(prediction)
 
         # This only works when we are using LightGBM
         train_results.append({
-            'train_auc': result['train']['auc'][booster.best_iteration],
-            'valid_auc': result['valid']['auc'][booster.best_iteration],
-            'best_iteration': booster.best_iteration,
+            'train_auc': result['train']['auc'][best_iteration],
+            'valid_auc': result['valid']['auc'][best_iteration],
+            'best_iteration': best_iteration,
             'train_time': time.time() - start_time,
             'prediction_time': {
                 'test': test_prediction_elapsed_time,
-                'valid': valid_prediction_elapsed_time
             },
             'feature_importance': {name: int(score) for name, score in
                                    zip(booster.feature_name(), booster.feature_importance())}

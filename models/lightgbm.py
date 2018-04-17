@@ -29,3 +29,17 @@ class LightGBM(Model):
                                    evals_result=eval_results,
                                    **params['train_params'])
         return model, eval_results
+
+    def train_without_validation(self, train, categorical_features: List[str], target: str, params: dict, best_iteration: int):
+        predictors = train.columns.drop(target)
+        d_train = lgb.Dataset(train[predictors], label=train[target].values)
+        train_params = params['train_params']
+        train_params['num_boost_round'] = best_iteration
+        if 'early_stopping_rounds' in train_params:
+            del train_params['early_stopping_rounds']
+        model = lgb.train(params['model_params'],
+                          d_train,
+                          categorical_feature = categorical_features,
+                          **train_params)
+        return model
+
