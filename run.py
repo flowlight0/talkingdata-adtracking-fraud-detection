@@ -19,7 +19,7 @@ from features.basic import Ip, App, Os, Device, Channel, ClickHour, BasicCount, 
 from models import LightGBM, Model
 from utils import dump_json_log
 
-feature_map = {
+parallelizable_feature_map = {
     'ip': Ip,
     'app': App,
     'os': Os,
@@ -39,20 +39,15 @@ feature_map = {
     'past_click_ratio_80': features.time_series_click.generate_future_click_ratio(4800),
     'next_click_time_delta': features.time_series_click.NextClickTimeDelta,
     'prev_click_time_delta': features.time_series_click.PrevClickTimeDelta,
-    # 'next_click_time_delta_v2': features.time_series_click.NextClickTimeDeltaV2,
-    # 'prev_click_time_delta_v2': features.time_series_click.PrevClickTimeDeltaV2,
-    # 'next_click_time_delta_v3': features.time_series_click.NextClickTimeDeltaV3,
-    # 'prev_click_time_delta_v3': features.time_series_click.PrevClickTimeDeltaV3,
     'exact_same_click': features.time_series_click.ExactSameClick,  # It will be duplicated with all id counts
     'exact_same_click_id': features.time_series_click.ExactSameClickId,
     'all_click_count': features.time_series_click.AllClickCount,
     'average_attributed_ratio': features.time_series_click.AverageAttributedRatio,
     'cumulative_click_count': features.time_series_click.CumulativeClickCount,
     'cumulative_click_count_future': features.time_series_click.CumulativeClickCountFuture,
-    # 'next_channel': features.time_series_click.NextChannel,
-    # 'prev_channel': features.time_series_click.PrevChannel,
-    # 'next_app': features.time_series_click.NextApp,
-    # 'prev_app': features.time_series_click.PrevApp
+}
+
+unparallelizable_feature_map = {
 }
 
 models = {
@@ -136,20 +131,34 @@ class DownSampler(object):
         return rs
 
 
-def get_feature_list(config) -> List[str]:
+def get_parallelizable_feature_list(config) -> List[str]:
     for feature in config['features']:
-        assert feature in feature_map, "Unknown feature {}".format(feature)
-    features = config['features']
+        assert feature in parallelizable_feature_map or feature in unparallelizable_feature_map, \
+            "Unknown feature {}".format(feature)
+    features = [feature for feature in config['features'] if feature in parallelizable_feature_map]
+    features.append(target_variable)
+    return features
+
+
+def get_unparallelizable_feature_list(config) -> List[str]:
+    for feature in config['features']:
+        assert feature in parallelizable_feature_map or feature in unparallelizable_feature_map, \
+            "Unknown feature {}".format(feature)
+    features = [feature for feature in config['features'] if feature in unparallelizable_feature_map]
     features.append(target_variable)
     return features
 
 
 def get_feature(feature_name: str, config) -> Feature:
     cache_dir: str = config['dataset']['cache_directory']
-    return feature_map[feature_name](cache_dir)
+    if feature_name in parallelizable_feature_map:
+        return parallelizable_feature_map[feature_name](cache_dir)
+    else:
+        return unparallelizable_feature_map[feature_name](cache_dir)
 
 
-def load_feature(feature_name: str, train_path: str, test_path: str, sampler: DownSampler, config) -> Tuple[List[str], str]:
+def load_feature(feature_name: str, train_path: str, test_path: str, sampler: DownSampler, config) -> Tuple[
+    List[str], str]:
     feature = get_feature(feature_name=feature_name, config=config)
     with simple_timer("Load random state indices"):
         random_states_ = sampler.get_indices()
@@ -164,18 +173,30 @@ def load_features(config, random_states: List[int]) -> Tuple[List[List[str]], Li
 
     sampler = DownSampler(config, tr_path, random_states)
     # We fix the number of processes to four because of memory limitation
+    parallelizable_feature_list = get_parallelizable_feature_list(config)
+    unparallelizable_feature_list = get_unparallelizable_feature_list(config)
+    print("Create features in parallel: ", parallelizable_feature_list)
+    print("Create features without parallelism: ", unparallelizable_feature_list)
+
     with Pool(4) as p:
         res = p.map(partial(load_feature, train_path=tr_path, test_path=te_path,
-                            sampler=sampler, config=config), get_feature_list(config))
+                            sampler=sampler, config=config), parallelizable_feature_list)
         for tr_feature_path_list, te_feature_path in res:
             for i, tr_feature_path in enumerate(tr_feature_path_list):
                 train_feature_paths_lists[i].append(tr_feature_path)
             test_feature_paths.append(te_feature_path)
+
+    for feature_name in unparallelizable_feature_list:
+        tr_feature_path_list, te_feature_path = load_feature(feature_name, tr_path, te_path, sampler, config)
+        for i, tr_feature_path in enumerate(tr_feature_path_list):
+            train_feature_paths_lists[i].append(tr_feature_path)
+        test_feature_paths.append(te_feature_path)
     return train_feature_paths_lists, test_feature_paths
 
 
 def load_categorical_features(config) -> List[str]:
-    return list(itertools.chain(*[feature_map[feature].categorical_features() for feature in config['features']]))
+    return list(itertools.chain(
+        *[get_feature(feature, config).categorical_features() for feature in config['features']]))
 
 
 def load_test_dataset(test_path: str, test_feature_paths: List[str], id_mapper: pd.DataFrame) -> pd.DataFrame:
@@ -185,6 +206,7 @@ def load_test_dataset(test_path: str, test_feature_paths: List[str], id_mapper: 
     df_test = df_test[df_test.click_id.isin(required_ids)]
     test = load_dataset(test_feature_paths, df_test.index)
     test['click_id'] = df_test.click_id
+    gc.collect()
     return test
 
 
