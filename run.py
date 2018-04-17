@@ -99,10 +99,10 @@ def negative_down_sampling(data: pd.DataFrame, random_state: int):
     with simple_timer("Get positive data"):
         positive_data = data[data[target_variable] == 1]
         positive_ratio = float(len(positive_data)) / len(data)
-    with simple_timer("Get negative data"):
-        negative_data = data[data[target_variable] == 0].sample(
-            frac=positive_ratio / (1 - positive_ratio), random_state=random_state)
-    return positive_data.index.union(negative_data.index).sort_values()
+    with simple_timer("Get negative index"):
+        negative_index = pd.Index(pd.Series(data.index[data[target_variable] == 0])
+                                  .sample(frac=positive_ratio / (1 - positive_ratio), random_state=random_state))
+    return positive_data.index.union(negative_index).sort_values()
 
 
 def get_feature_list(config) -> List[str]:
