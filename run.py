@@ -2,8 +2,10 @@ import argparse
 import gc
 import itertools
 import json
+import time
 import os
 import time
+from contextlib import contextmanager
 from functools import partial
 from multiprocessing.pool import Pool
 from typing import List, Tuple
@@ -62,6 +64,14 @@ output_directory = 'data/output'
 target_variable = 'is_attributed'
 
 
+@contextmanager
+def simple_timer(message):
+    start_time = time.time()
+    yield
+    elapsed_time = time.time() - start_time
+    print("{}: {:.3f} [s]".format(message, elapsed_time))
+
+
 # Now we don't set index when loading training features because they should have been already down-sampled.
 def load_dataset(paths, index=None) -> pd.DataFrame:
     assert len(paths) > 0
@@ -106,28 +116,32 @@ def get_feature(feature_name: str, config) -> Feature:
     return feature_map[feature_name](cache_dir)
 
 
-def load_feature(feature_name: str, train_path: str, test_path: str, random_states_: List[Tuple[int, pd.Index]],
-                 config) -> Tuple[List[str], str]:
+def get_random_state_indices(train_path: str, random_states: List[int]) -> List[Tuple[int, pd.Index]]:
+    rs = []
+    train_data = pd.read_feather(train_path)
+    for random_state in random_states:
+        train_index = negative_down_sampling(train_data, random_state=random_state)
+        rs.append((random_state, train_index))
+    return rs
+
+
+def load_feature(feature_name: str, train_path: str, test_path: str, random_states: List[int], config) -> Tuple[List[str], str]:
     feature = get_feature(feature_name=feature_name, config=config)
+    with simple_timer("Load random state indices"):
+        random_states_ = get_random_state_indices(train_path, random_states)
     return feature.create_features(train_path, test_path, random_states=random_states_)
 
 
 def load_features(config, random_states: List[int]) -> Tuple[List[List[str]], List[str]]:
     tr_path = get_dataset_filename(config, 'train')
-    train_data = pd.read_feather(tr_path)
     te_path = get_dataset_filename(config, 'test')
     train_feature_paths_lists = [[] for _ in random_states]
     test_feature_paths = []
 
-    rs = []
-    for random_state in random_states:
-        train_index = negative_down_sampling(train_data, random_state=random_state)
-        rs.append((random_state, train_index))
-
     # We fix the number of processes to four because of memory limitation
     with Pool(4) as p:
-        res = p.map(partial(load_feature, train_path=tr_path, test_path=te_path, random_states_=rs, config=config),
-                    get_feature_list(config))
+        res = p.map(partial(load_feature, train_path=tr_path, test_path=te_path,
+                            random_states=random_states, config=config), get_feature_list(config))
         for tr_feature_path_list, te_feature_path in res:
             for i, tr_feature_path in enumerate(tr_feature_path_list):
                 train_feature_paths_lists[i].append(tr_feature_path)
@@ -164,10 +178,11 @@ def main():
     config = json.load(open(options.config))
     assert config['model']['name'] in models  # check model's existence before getting datasets
 
-    id_mapper_file = 'data/working/id_mapping.feather'
-    assert os.path.exists(id_mapper_file), "Please download {} from s3 before running this script".format(
-        id_mapper_file)
-    id_mapper = pd.read_feather(id_mapper_file)
+    with simple_timer("Load click id mapping"):
+        id_mapper_file = 'data/working/id_mapping.feather'
+        assert os.path.exists(id_mapper_file), "Please download {} from s3 before running this script".format(
+            id_mapper_file)
+        id_mapper = pd.read_feather(id_mapper_file)
 
     model: Model = models[config['model']['name']]()
     predictions = []
@@ -178,30 +193,39 @@ def main():
     if not negative_down_sampling_config['enabled']:
         raise NotImplementedError("We should always downsample")
 
-    sampled_train_feature_paths_list, test_feathre_paths = \
-        load_features(config, list(range(negative_down_sampling_config['bagging_size'])))
+    with simple_timer("Create features"):
+        sampled_train_feature_paths_list, test_feathre_paths = \
+            load_features(config, list(range(negative_down_sampling_config['bagging_size'])))
 
-    test_data = load_test_dataset(get_dataset_filename(config, 'test'), test_feathre_paths, id_mapper)
+    with simple_timer("Load test features"):
+        test_data = load_test_dataset(get_dataset_filename(config, 'test'), test_feathre_paths, id_mapper)
+
     for i, sampled_train_feature_paths in enumerate(sampled_train_feature_paths_list):
         start_time = time.time()
+        with simple_timer("Load train features"):
+            sampled_train_dataset = load_train_dataset(sampled_train_feature_paths)
+
         valid_ratio = 0.9
-        sampled_train_dataset = load_train_dataset(sampled_train_feature_paths)
         train_length = int(len(sampled_train_dataset) * valid_ratio)
         sampled_train_data = sampled_train_dataset[:train_length]
         sampled_valid_data = sampled_train_dataset[train_length:]
         predictors = sampled_train_data.columns.drop(target_variable)
-        booster, result = model.train_and_predict(train=sampled_train_data,
-                                                  valid=sampled_valid_data,
-                                                  categorical_features=categorical_features,
-                                                  target=target_variable,
-                                                  params=config['model'])
-        test_prediction_start_time = time.time()
-        prediction = booster.predict(test_data[predictors])
-        test_prediction_elapsed_time = time.time() - test_prediction_start_time
 
-        valid_prediction_start_time = time.time()
-        valid_prediction_elapsed_time = time.time() - valid_prediction_start_time
-        predictions.append(prediction)
+        with simple_timer("Train model"):
+            booster, result = model.train_and_predict(train=sampled_train_data,
+                                                      valid=sampled_valid_data,
+                                                      categorical_features=categorical_features,
+                                                      target=target_variable,
+                                                      params=config['model'])
+        with simple_timer("Create prediction"):
+            test_prediction_start_time = time.time()
+            prediction = booster.predict(test_data[predictors])
+            test_prediction_elapsed_time = time.time() - test_prediction_start_time
+
+            valid_prediction_start_time = time.time()
+            valid_prediction_elapsed_time = time.time() - valid_prediction_start_time
+            predictions.append(prediction)
+
         # This only works when we are using LightGBM
         train_results.append({
             'train_auc': result['train']['auc'][booster.best_iteration],
