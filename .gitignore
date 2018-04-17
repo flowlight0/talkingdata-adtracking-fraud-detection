@@ -105,6 +105,7 @@ ENV/
 # files under ./data
 data/*/*.feather
 data/*/*.csv
+data/*/*.pkl
 
 cpp/*.dSYM
 cpp/*_main

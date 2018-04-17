@@ -2,7 +2,6 @@ import argparse
 import gc
 import itertools
 import json
-import time
 import os
 import time
 from contextlib import contextmanager
@@ -10,6 +9,7 @@ from functools import partial
 from multiprocessing.pool import Pool
 from typing import List, Tuple
 
+import joblib
 import pandas as pd
 import pandas.testing
 
@@ -95,19 +95,45 @@ def get_dataset_filename(config, dataset_type: str) -> str:
     return os.path.join(config['dataset']['input_directory'], config['dataset']['files'][dataset_type])
 
 
-def negative_down_sampling(data: pd.DataFrame, random_state: int):
-    with simple_timer("Get positive data"):
-        positive_data = data[data[target_variable] == 1]
-        positive_ratio = float(len(positive_data)) / len(data)
-    with simple_timer("Get negative index"):
-        with simple_timer("Original negative index"):
-            original_negative_index = data.index[data[target_variable] == 0]
-        with simple_timer("Negative index series"):
-            negative_series = pd.Series(original_negative_index)
-        with simple_timer("Negative down sampling"):
-            sampled_series = negative_series.sample(frac=positive_ratio / (1 - positive_ratio), random_state=random_state)
-        negative_index = pd.Index(sampled_series)
-    return positive_data.index.union(negative_index).sort_values()
+class DownSampler(object):
+    def __init__(self, config, data_path, random_states):
+        self.data_path = data_path
+        self.random_states = random_states
+        self.config = config
+        with simple_timer("Load training dataset in random sampled index calculation"):
+            data = pd.read_feather(data_path)
+        with simple_timer("Create cache file for indices"):
+            for random_state in self.random_states:
+                cache_file = self.get_index_cache_file(random_state)
+                if not os.path.exists(cache_file):
+                    index = self.negative_down_sampling(data, random_state)
+                    joblib.dump(index, cache_file)
+
+    def get_index_cache_file(self, random_state: int) -> str:
+        cache_dir: str = self.config['dataset']['cache_directory']
+        cache_file = os.path.join(cache_dir, os.path.basename(self.data_path) + '.index_' + str(random_state) + '.pkl')
+        return cache_file
+
+    @staticmethod
+    def negative_down_sampling(data: pd.DataFrame, random_state: int):
+        with simple_timer("Get positive data"):
+            positive_data = data[data[target_variable] == 1]
+            positive_ratio = float(len(positive_data)) / len(data)
+        with simple_timer("Get negative data"):
+            negative_data = data[data[target_variable] == 0].sample(
+                frac=positive_ratio / (1 - positive_ratio), random_state=random_state)
+        return positive_data.index.union(negative_data.index).sort_values()
+
+    # prepare must be called before calling this function
+    def get_indices(self) -> List[Tuple[int, pd.Index]]:
+        rs = []
+        for random_state in self.random_states:
+            cache_file = self.get_index_cache_file(random_state)
+            if not os.path.exists(cache_file):
+                raise FileNotFoundError("Cache file must be created before!")
+            index = joblib.load(cache_file)
+            rs.append((random_state, index))
+        return rs
 
 
 def get_feature_list(config) -> List[str]:
@@ -123,20 +149,10 @@ def get_feature(feature_name: str, config) -> Feature:
     return feature_map[feature_name](cache_dir)
 
 
-def get_random_state_indices(train_path: str, random_states: List[int]) -> List[Tuple[int, pd.Index]]:
-    rs = []
-    with simple_timer("Load training dataset in random sampled index calculation"):
-        train_data = pd.read_feather(train_path)
-    for random_state in random_states:
-        train_index = negative_down_sampling(train_data, random_state=random_state)
-        rs.append((random_state, train_index))
-    return rs
-
-
-def load_feature(feature_name: str, train_path: str, test_path: str, random_states: List[int], config) -> Tuple[List[str], str]:
+def load_feature(feature_name: str, train_path: str, test_path: str, sampler: DownSampler, config) -> Tuple[List[str], str]:
     feature = get_feature(feature_name=feature_name, config=config)
     with simple_timer("Load random state indices"):
-        random_states_ = get_random_state_indices(train_path, random_states)
+        random_states_ = sampler.get_indices()
     return feature.create_features(train_path, test_path, random_states=random_states_)
 
 
@@ -146,10 +162,11 @@ def load_features(config, random_states: List[int]) -> Tuple[List[List[str]], Li
     train_feature_paths_lists = [[] for _ in random_states]
     test_feature_paths = []
 
+    sampler = DownSampler(config, tr_path, random_states)
     # We fix the number of processes to four because of memory limitation
     with Pool(4) as p:
         res = p.map(partial(load_feature, train_path=tr_path, test_path=te_path,
-                            random_states=random_states, config=config), get_feature_list(config))
+                            sampler=sampler, config=config), get_feature_list(config))
         for tr_feature_path_list, te_feature_path in res:
             for i, tr_feature_path in enumerate(tr_feature_path_list):
                 train_feature_paths_lists[i].append(tr_feature_path)

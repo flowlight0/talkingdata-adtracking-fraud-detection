@@ -5,10 +5,10 @@
         "train_auc": 0.9805985389992931,
         "valid_auc": 0.9699624530663329,
         "best_iteration": 56,
-        "train_time": 0.5787990093231201,
+        "train_time": 0.8504209518432617,
         "prediction_time": {
-          "test": 0.14335989952087402,
-          "valid": 0.0
+          "test": 0.17088580131530762,
+          "valid": 9.5367431640625e-07
         },
         "feature_importance": {
           "ip": 0,
@@ -180,10 +180,10 @@
         "train_auc": 0.9733951441816611,
         "valid_auc": 0.9781771501925546,
         "best_iteration": 44,
-        "train_time": 0.6520729064941406,
+        "train_time": 1.174400806427002,
         "prediction_time": {
-          "test": 0.12028694152832031,
-          "valid": 0.0
+          "test": 0.13422203063964844,
+          "valid": 9.5367431640625e-07
         },
         "feature_importance": {
           "ip": 0,
@@ -355,10 +355,10 @@
         "train_auc": 0.9939513911800286,
         "valid_auc": 0.979454926624738,
         "best_iteration": 107,
-        "train_time": 0.7367849349975586,
+        "train_time": 0.8023359775543213,
         "prediction_time": {
-          "test": 0.17137575149536133,
-          "valid": 0.0
+          "test": 0.16870927810668945,
+          "valid": 9.5367431640625e-07
         },
         "feature_importance": {
           "ip": 0,
@@ -530,10 +530,10 @@
         "train_auc": 0.9619526221239911,
         "valid_auc": 0.9653276955602537,
         "best_iteration": 22,
-        "train_time": 0.6176600456237793,
+        "train_time": 0.7300951480865479,
         "prediction_time": {
-          "test": 0.13014626502990723,
-          "valid": 9.5367431640625e-07
+          "test": 0.12574195861816406,
+          "valid": 0.0
         },
         "feature_importance": {
           "ip": 0,
@@ -705,10 +705,10 @@
         "train_auc": 0.9910276555625392,
         "valid_auc": 0.9566326530612245,
         "best_iteration": 90,
-        "train_time": 0.9201869964599609,
+        "train_time": 0.8721919059753418,
         "prediction_time": {
-          "test": 0.32841992378234863,
-          "valid": 7.152557373046875e-07
+          "test": 0.20451927185058594,
+          "valid": 9.5367431640625e-07
         },
         "feature_importance": {
           "ip": 0,
@@ -881,7 +881,7 @@
     "average_valid_auc": 0.9699109757010207,
     "train_auc_std": 0.011711272051284529,
     "valid_auc_std": 0.008446769783215635,
-    "average_train_time": 0.7011007785797119
+    "average_train_time": 0.8858889579772949
   },
   "config": {
     "features": [
