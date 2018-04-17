@@ -100,8 +100,13 @@ def negative_down_sampling(data: pd.DataFrame, random_state: int):
         positive_data = data[data[target_variable] == 1]
         positive_ratio = float(len(positive_data)) / len(data)
     with simple_timer("Get negative index"):
-        negative_index = pd.Index(pd.Series(data.index[data[target_variable] == 0])
-                                  .sample(frac=positive_ratio / (1 - positive_ratio), random_state=random_state))
+        with simple_timer("Original negative index"):
+            original_negative_index = data.index[data[target_variable] == 0]
+        with simple_timer("Negative index series"):
+            negative_series = pd.Series(original_negative_index)
+        with simple_timer("Negative down sampling"):
+            sampled_series = negative_series.sample(frac=positive_ratio / (1 - positive_ratio), random_state=random_state)
+        negative_index = pd.Index(sampled_series)
     return positive_data.index.union(negative_index).sort_values()
 
 
