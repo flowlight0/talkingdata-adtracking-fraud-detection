@@ -96,10 +96,12 @@ def get_dataset_filename(config, dataset_type: str) -> str:
 
 
 def negative_down_sampling(data: pd.DataFrame, random_state: int):
-    positive_data = data[data[target_variable] == 1]
-    positive_ratio = float(len(positive_data)) / len(data)
-    negative_data = data[data[target_variable] == 0].sample(
-        frac=positive_ratio / (1 - positive_ratio), random_state=random_state)
+    with simple_timer("Get positive data"):
+        positive_data = data[data[target_variable] == 1]
+        positive_ratio = float(len(positive_data)) / len(data)
+    with simple_timer("Get negative data"):
+        negative_data = data[data[target_variable] == 0].sample(
+            frac=positive_ratio / (1 - positive_ratio), random_state=random_state)
     return positive_data.index.union(negative_data.index).sort_values()
 
 
@@ -118,7 +120,8 @@ def get_feature(feature_name: str, config) -> Feature:
 
 def get_random_state_indices(train_path: str, random_states: List[int]) -> List[Tuple[int, pd.Index]]:
     rs = []
-    train_data = pd.read_feather(train_path)
+    with simple_timer("Load training dataset in random sampled index calculation"):
+        train_data = pd.read_feather(train_path)
     for random_state in random_states:
         train_index = negative_down_sampling(train_data, random_state=random_state)
         rs.append((random_state, train_index))
