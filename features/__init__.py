@@ -76,3 +76,15 @@ class FeatherFeatureDF(FeatherFeature):
 
     def create_features_from_dataframe(self, df_train: pd.DataFrame, df_test: pd.DataFrame):
         raise NotImplementedError
+
+
+class FeatherFeaturePath(FeatherFeature):
+    def create_features_impl(self, train_path: str, test_path: str, train_feature_paths: List[Tuple[str, pd.Index]],
+                             test_feature_path: str):
+        train_feature, test_feature = self.create_features_from_path(train_path, test_path)
+        for train_feature_path, index in train_feature_paths:
+            train_feature.loc[index].reset_index(drop=True).to_feather(train_feature_path)
+        test_feature.to_feather(test_feature_path)
+
+    def create_features_from_path(self, train_path: str, test_path: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        raise NotImplementedError

@@ -4,7 +4,6 @@ import itertools
 import json
 import os
 import time
-from contextlib import contextmanager
 from functools import partial
 from multiprocessing.pool import Pool
 from typing import List, Tuple
@@ -14,10 +13,11 @@ import pandas as pd
 import pandas.testing
 
 import features.time_series_click
+import features.category_vector
 from features import Feature
 from features.basic import Ip, App, Os, Device, Channel, ClickHour, BasicCount, IsAttributed
 from models import LightGBM, Model
-from utils import dump_json_log
+from utils import dump_json_log, simple_timer
 
 parallelizable_feature_map = {
     'ip': Ip,
@@ -48,6 +48,9 @@ parallelizable_feature_map = {
 }
 
 unparallelizable_feature_map = {
+    'komaki_lda_5': features.category_vector.KomakiLDA5,
+    'komaki_pca_5': features.category_vector.KomakiPCA5,
+    'komaki_nmf_5': features.category_vector.KomakiNMF5
 }
 
 models = {
@@ -57,14 +60,6 @@ models = {
 output_directory = 'data/output'
 
 target_variable = 'is_attributed'
-
-
-@contextmanager
-def simple_timer(message):
-    start_time = time.time()
-    yield
-    elapsed_time = time.time() - start_time
-    print("{}: {:.3f} [s]".format(message, elapsed_time))
 
 
 # Now we don't set index when loading training features because they should have been already down-sampled.
@@ -265,6 +260,7 @@ def main():
         sampled_train_data_with_fixed_iteration = sampled_train_dataset[len(sampled_train_dataset) - train_length:]
 
         best_iteration = booster.best_iteration
+        print(best_iteration)
         with simple_timer("Train model without validation"):
             booster = model.train_without_validation(train=sampled_train_data_with_fixed_iteration,
                                                      categorical_features=categorical_features,

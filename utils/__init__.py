@@ -1,6 +1,9 @@
-import numpy as np
 import json
 import os
+import time
+from contextlib import contextmanager
+
+import numpy as np
 
 
 def dump_json_log(options, train_results, output_directory):
@@ -19,3 +22,11 @@ def dump_json_log(options, train_results, output_directory):
     log_path = os.path.join(os.path.dirname(__file__), '../', output_directory,
                             os.path.basename(options.config) + '.result.json')
     json.dump(results, open(log_path, 'w'), indent=2)
+
+
+@contextmanager
+def simple_timer(message):
+    start_time = time.time()
+    yield
+    elapsed_time = time.time() - start_time
+    print("{}: {:.3f} [s]".format(message, elapsed_time))
