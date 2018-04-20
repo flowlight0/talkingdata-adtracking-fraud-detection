@@ -249,6 +249,7 @@ def main():
         sampled_train_data = sampled_train_dataset[:train_length]
         sampled_valid_data = sampled_train_dataset[train_length:]
         predictors = sampled_train_data.columns.drop(target_variable)
+        gc.collect()
 
         with simple_timer("Train model with validation"):
             booster, result = model.train_and_predict(train=sampled_train_data,

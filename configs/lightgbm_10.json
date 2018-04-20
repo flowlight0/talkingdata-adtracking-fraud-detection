@@ -25,7 +25,7 @@
       "max_bin": 100,
       "subsample": 0.7,
       "subsample_freq": 1,
-      "colsample_bylevel": 0.5,
+      "colsample_bytree": 0.5,
       "min_child_weight": 0,
       "subsample_for_bin": 200000,
       "min_split_gain": 0,
