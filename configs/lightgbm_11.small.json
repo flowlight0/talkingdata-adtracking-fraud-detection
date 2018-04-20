@@ -1,0 +1,55 @@
+{
+  "features": [
+    "ip",
+    "os",
+    "app",
+    "channel",
+    "hour",
+    "count",
+    "future_click_count_10",
+    "future_click_count_80",
+    "next_click_time_delta",
+    "prev_click_time_delta",
+    "average_attributed_ratio",
+    "single_pca_count"
+  ],
+  "model": {
+    "name": "lightgbm",
+    "model_params": {
+      "boosting_type": "gbdt",
+      "objective": "binary",
+      "metric": "auc",
+      "learning_rate": 0.1,
+      "num_leaves": 255,
+      "max_depth": 8,
+      "min_child_samples": 100,
+      "max_bin": 100,
+      "subsample": 0.7,
+      "subsample_freq": 1,
+      "colsample_bytree": 0.7,
+      "min_child_weight": 0,
+      "subsample_for_bin": 200000,
+      "min_split_gain": 0,
+      "reg_alpha": 0,
+      "reg_lambda": 0,
+      "verbose": 0
+    },
+    "train_params": {
+      "num_boost_round": 350,
+      "early_stopping_rounds": 30
+    }
+  },
+  "dataset": {
+    "input_directory": "data/input/",
+    "cache_directory": "data/working/",
+    "files": {
+      "train": "train.feather.small",
+      "test": "old_test.feather.small"
+    },
+    "negative_down_sampling": {
+      "enabled": true,
+      "bagging_size": 1,
+      "random_state": 114514
+    }
+  }
+}

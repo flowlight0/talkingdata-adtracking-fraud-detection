@@ -9,10 +9,11 @@ import numpy as np
 import pandas as pd
 from sklearn.base import TransformerMixin
 from sklearn.decomposition import LatentDirichletAllocation, TruncatedSVD, NMF
-from sklearn.feature_extraction.text import CountVectorizer, VectorizerMixin, TfidfVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer, TfidfTransformer
 from sklearn.pipeline import make_pipeline
+from sklearn.preprocessing import OneHotEncoder
 
-from features import FeatherFeaturePath
+from features import FeatherFeaturePath, FeatherFeatureDF
 from utils import simple_timer
 
 
@@ -106,6 +107,18 @@ class KomakiLDA5(OneVsOneCoOccurrenceLatentVector):
         return 5
 
 
+class KomakiLDA5MinDF1(OneVsOneCoOccurrenceLatentVector):
+    def vectorizer_factory(self):
+        return CountVectorizer(min_df=1)
+
+    def transformer_factory(self) -> TransformerMixin:
+        return LatentDirichletAllocation(n_components=self.width, learning_method='online', random_state=71)
+
+    @property
+    def width(self) -> int:
+        return 5
+
+
 class KomakiPCA5(OneVsOneCoOccurrenceLatentVector):
     def vectorizer_factory(self):
         return TfidfVectorizer(min_df=2, dtype=np.float32)
@@ -128,3 +141,45 @@ class KomakiNMF5(OneVsOneCoOccurrenceLatentVector):
     @property
     def width(self) -> int:
         return 5
+
+class SinglePCACount(FeatherFeatureDF):
+    @staticmethod
+    def categorical_features():
+        return []
+
+    def create_features_from_dataframe(self, df_train: pd.DataFrame, df_test: pd.DataFrame):
+        train_length = len(df_train)
+        n_components = 30
+        df_data: pd.DataFrame = pd.concat([df_train, df_test])
+        pipeline = make_pipeline(
+            OneHotEncoder(),
+            TruncatedSVD(n_components=n_components, random_state=71)
+        )
+        features = pipeline.fit_transform(df_data[['ip', 'app', 'os', 'device', 'channel']].values).astype(np.float32)
+        feature_columns = []
+        for i in range(n_components):
+            feature_columns.append(self.name + '_{}'.format(i))
+        return pd.DataFrame(data=features[:train_length], columns=feature_columns), \
+               pd.DataFrame(data=features[train_length:], columns=feature_columns)
+
+
+class SinglePCATfIdf(FeatherFeatureDF):
+    @staticmethod
+    def categorical_features():
+        return []
+
+    def create_features_from_dataframe(self, df_train: pd.DataFrame, df_test: pd.DataFrame):
+        train_length = len(df_train)
+        n_components = 30
+        df_data: pd.DataFrame = pd.concat([df_train, df_test])
+        pipeline = make_pipeline(
+            OneHotEncoder(),
+            TfidfTransformer(),
+            TruncatedSVD(n_components=30, random_state=71)
+        )
+        features = pipeline.fit_transform(df_data[['ip', 'app', 'os', 'device', 'channel']].values).astype(np.float32)
+        feature_columns = []
+        for i in range(n_components):
+            feature_columns.append(self.name + '_{}'.format(i))
+        return pd.DataFrame(data=features[:train_length], columns=feature_columns), \
+               pd.DataFrame(data=features[train_length:], columns=feature_columns)
