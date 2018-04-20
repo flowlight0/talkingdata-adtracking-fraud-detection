@@ -260,7 +260,6 @@ def main():
         sampled_train_data_with_fixed_iteration = sampled_train_dataset[len(sampled_train_dataset) - train_length:]
 
         best_iteration = booster.best_iteration
-        print(best_iteration)
         with simple_timer("Train model without validation"):
             booster = model.train_without_validation(train=sampled_train_data_with_fixed_iteration,
                                                      categorical_features=categorical_features,

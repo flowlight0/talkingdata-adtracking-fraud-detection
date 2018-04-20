@@ -1,3 +1,4 @@
+import copy
 from typing import List, Tuple
 
 import lightgbm as lgb
@@ -33,7 +34,7 @@ class LightGBM(Model):
     def train_without_validation(self, train, categorical_features: List[str], target: str, params: dict, best_iteration: int):
         predictors = train.columns.drop(target)
         d_train = lgb.Dataset(train[predictors], label=train[target].values)
-        train_params = params['train_params']
+        train_params = copy.deepcopy(params['train_params'])
         train_params['num_boost_round'] = best_iteration
         if 'early_stopping_rounds' in train_params:
             del train_params['early_stopping_rounds']
