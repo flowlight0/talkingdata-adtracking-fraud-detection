@@ -137,6 +137,12 @@ class KomakiPCA5(OneVsOneCoOccurrenceLatentVector):
         return 5
 
 
+class KomakiPCA5NoDevice(KomakiPCA5):
+    def get_column_pairs(self):
+        columns = ['ip', 'app', 'os', 'channel']
+        return [(col1, col2) for col1, col2 in itertools.product(columns, repeat=2) if col1 != col2]
+
+
 class KomakiNMF5(OneVsOneCoOccurrenceLatentVector):
     def vectorizer_factory(self):
         return TfidfVectorizer(min_df=2, dtype=np.float32)
@@ -147,6 +153,12 @@ class KomakiNMF5(OneVsOneCoOccurrenceLatentVector):
     @property
     def width(self) -> int:
         return 5
+
+
+class KomakiNMF5NoDevice(KomakiNMF5):
+    def get_column_pairs(self):
+        columns = ['ip', 'app', 'os', 'channel']
+        return [(col1, col2) for col1, col2 in itertools.product(columns, repeat=2) if col1 != col2]
 
 class SinglePCACount(FeatherFeatureDF):
     @staticmethod
