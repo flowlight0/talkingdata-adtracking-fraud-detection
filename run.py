@@ -217,6 +217,7 @@ def load_train_dataset(train_feature_paths: List[str]) -> pd.DataFrame:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', default='./configs/lightgbm_0.json')
+    parser.add_argument('--train_only', default=False, action='store_true')
     options = parser.parse_args()
     config = json.load(open(options.config))
     assert config['model']['name'] in models  # check model's existence before getting datasets
@@ -240,8 +241,11 @@ def main():
         sampled_train_feature_paths_list, test_feathre_paths = \
             load_features(config, list(range(negative_down_sampling_config['bagging_size'])))
 
-    with simple_timer("Load test features"):
-        test_data = load_test_dataset(get_dataset_filename(config, 'test'), test_feathre_paths, id_mapper)
+    if not options.train_only:
+        with simple_timer("Load test features"):
+            test_data = load_test_dataset(get_dataset_filename(config, 'test'), test_feathre_paths, id_mapper)
+    else:
+        test_data = None
 
     for i, sampled_train_feature_paths in enumerate(sampled_train_feature_paths_list):
         start_time = time.time()
@@ -273,11 +277,15 @@ def main():
                                                      target=target_variable,
                                                      params=config['model'],
                                                      best_iteration=best_iteration)
-        with simple_timer("Create prediction"):
-            test_prediction_start_time = time.time()
-            prediction = booster.predict(test_data[predictors])
-            test_prediction_elapsed_time = time.time() - test_prediction_start_time
-            predictions.append(prediction)
+
+        if not options.train_only:
+            with simple_timer("Create prediction"):
+                test_prediction_start_time = time.time()
+                prediction = booster.predict(test_data[predictors])
+                test_prediction_elapsed_time = time.time() - test_prediction_start_time
+                predictions.append(prediction)
+        else:
+            test_prediction_elapsed_time = 0
 
         # This only works when we are using LightGBM
         train_results.append({
@@ -293,11 +301,16 @@ def main():
         })
         print("Finished processing {}-th bag: {}".format(i, str(train_results[-1])))
 
+    if not options.train_only:
+        prepare_submission(id_mapper, options, predictions, test_data)
+    dump_json_log(options, train_results, output_directory)
+
+
+def prepare_submission(id_mapper, options, predictions, test_data):
     test_data['prediction'] = sum(predictions) / len(predictions)
     old_click_to_prediction = {}
     for (click_id, prediction) in zip(test_data.click_id, test_data.prediction):
         old_click_to_prediction[click_id] = prediction
-
     click_ids = []
     predictions = []
     for (new_click_id, old_click_id) in zip(id_mapper.new_click_id, id_mapper.old_click_id):
@@ -309,7 +322,6 @@ def main():
     submission_path = os.path.join(os.path.dirname(__file__), output_directory,
                                    os.path.basename(options.config) + '.submission.csv')
     submission.sort_values(by='click_id').to_csv(submission_path, index=False)
-    dump_json_log(options, train_results, output_directory)
 
 
 if __name__ == "__main__":
