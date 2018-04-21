@@ -107,6 +107,12 @@ class KomakiLDA5(OneVsOneCoOccurrenceLatentVector):
         return 5
 
 
+class KomakiLDA5NoDevice(KomakiLDA5):
+    def get_column_pairs(self):
+        columns = ['ip', 'app', 'os', 'channel']
+        return [(col1, col2) for col1, col2 in itertools.product(columns, repeat=2) if col1 != col2]
+
+
 class KomakiLDA5MinDF1(OneVsOneCoOccurrenceLatentVector):
     def vectorizer_factory(self):
         return CountVectorizer(min_df=1)
