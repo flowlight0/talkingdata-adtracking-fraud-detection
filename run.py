@@ -9,6 +9,7 @@ from multiprocessing.pool import Pool
 from typing import List, Tuple
 
 import joblib
+import numpy as np
 import pandas as pd
 import pandas.testing
 
@@ -197,17 +198,6 @@ def load_categorical_features(config) -> List[str]:
         *[get_feature(feature, config).categorical_features() for feature in config['features']]))
 
 
-def load_test_dataset(test_path: str, test_feature_paths: List[str], id_mapper: pd.DataFrame) -> pd.DataFrame:
-    assert len(test_feature_paths) > 0
-    required_ids = set(id_mapper['old_click_id'])
-    df_test = pd.read_feather(test_path)
-    df_test = df_test[df_test.click_id.isin(required_ids)]
-    test = load_dataset(test_feature_paths, df_test.index)
-    test['click_id'] = df_test.click_id
-    gc.collect()
-    return test
-
-
 def load_train_dataset(train_feature_paths: List[str]) -> pd.DataFrame:
     assert len(train_feature_paths) > 0
     print(train_feature_paths)
@@ -224,14 +214,7 @@ def main():
     config = json.load(open(options.config))
     assert config['model']['name'] in models  # check model's existence before getting datasets
 
-    with simple_timer("Load click id mapping"):
-        id_mapper_file = 'data/working/id_mapping.feather'
-        assert os.path.exists(id_mapper_file), "Please download {} from s3 before running this script".format(
-            id_mapper_file)
-        id_mapper = pd.read_feather(id_mapper_file)
-
     model: Model = models[config['model']['name']]()
-    predictions = []
     train_results = []
     categorical_features = load_categorical_features(config)
     negative_down_sampling_config = config['dataset']['negative_down_sampling']
@@ -240,15 +223,11 @@ def main():
         raise NotImplementedError("We should always downsample")
 
     with simple_timer("Create features"):
-        sampled_train_feature_paths_list, test_feathre_paths = \
+        sampled_train_feature_paths_list, test_feature_paths = \
             load_features(config, list(range(negative_down_sampling_config['bagging_size'])))
 
-    if not options.train_only:
-        with simple_timer("Load test features"):
-            test_data = load_test_dataset(get_dataset_filename(config, 'test'), test_feathre_paths, id_mapper)
-    else:
-        test_data = None
-
+    prediction_boosters = []
+    predictors = []  # this list must be filled in the following loop.
     for i, sampled_train_feature_paths in enumerate(sampled_train_feature_paths_list):
         start_time = time.time()
         with simple_timer("Load train features"):
@@ -279,15 +258,7 @@ def main():
                                                      target=target_variable,
                                                      params=config['model'],
                                                      best_iteration=best_iteration)
-
-        if not options.train_only:
-            with simple_timer("Create prediction"):
-                test_prediction_start_time = time.time()
-                prediction = booster.predict(test_data[predictors])
-                test_prediction_elapsed_time = time.time() - test_prediction_start_time
-                predictions.append(prediction)
-        else:
-            test_prediction_elapsed_time = 0
+            prediction_boosters.append(booster)
 
         # This only works when we are using LightGBM
         train_results.append({
@@ -295,24 +266,58 @@ def main():
             'valid_auc': result['valid']['auc'][best_iteration],
             'best_iteration': best_iteration,
             'train_time': time.time() - start_time,
-            'prediction_time': {
-                'test': test_prediction_elapsed_time,
-            },
             'feature_importance': {name: int(score) for name, score in
                                    zip(booster.feature_name(), booster.feature_importance())}
         })
-        print("Finished processing {}-th bag: {}".format(i, str(train_results[-1])))
+        print("Finished {}-th bag training: {}".format(i, str(train_results[-1])))
 
     if not options.train_only:
-        prepare_submission(id_mapper, options, predictions, test_data)
+        prepare_submission(options, prediction_boosters, predictors, test_feature_paths)
     dump_json_log(options, train_results, output_directory)
 
 
-def prepare_submission(id_mapper, options, predictions, test_data):
-    test_data['prediction'] = sum(predictions) / len(predictions)
-    old_click_to_prediction = {}
-    for (click_id, prediction) in zip(test_data.click_id, test_data.prediction):
-        old_click_to_prediction[click_id] = prediction
+def split_index(df, num_splits=5):
+    assert num_splits > 0
+    sizes = []
+    for i in range(num_splits):
+        sizes.append(len(df) * i // num_splits)
+    sizes.append(len(df))
+
+    for i in range(num_splits):
+        yield df.index[sizes[i]: sizes[i + 1]]
+
+
+def prepare_submission(options, prediction_boosters: List, predictors: List[str], test_feature_paths: List[str]):
+    config = json.load(open(options.config))
+
+    with simple_timer("Load click id mapping"):
+        id_mapper_file = 'data/working/id_mapping.feather'
+        assert os.path.exists(id_mapper_file), "Please download {} from s3 before running this script".format(
+            id_mapper_file)
+        id_mapper = pd.read_feather(id_mapper_file)
+
+    with simple_timer("Load test file"):
+        required_ids = set(id_mapper['old_click_id'])
+        df_test = pd.read_feather(get_dataset_filename(config, 'test'))
+        df_test = df_test[df_test.click_id.isin(required_ids)]
+        del required_ids
+        gc.collect()
+
+    bagging_predictions = [[] for _ in prediction_boosters]
+    for i, sub_index in enumerate(split_index(df_test)):
+        with simple_timer("Load {}-th test features batch".format(i)):
+            test_data = load_dataset(test_feature_paths, sub_index)
+            test_data['click_id'] = df_test.click_id.loc[sub_index]
+            gc.collect()
+
+        with simple_timer("Create prediction on {}-th test features batch".format(i)):
+            for j, booster in enumerate(prediction_boosters):
+                prediction = booster.predict(test_data[predictors])
+                bagging_predictions[j].extend(list(prediction))
+
+    df_test['prediction'] = sum(np.array(pred) for pred in bagging_predictions) / len(bagging_predictions)
+    old_click_to_prediction = {cid: pred for (cid, pred) in zip(df_test.click_id, df_test.prediction)}
+
     click_ids = []
     predictions = []
     for (new_click_id, old_click_id) in zip(id_mapper.new_click_id, id_mapper.old_click_id):
