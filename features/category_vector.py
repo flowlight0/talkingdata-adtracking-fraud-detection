@@ -238,8 +238,7 @@ class UserItemLDA(FeatherFeatureDF):
             values = vectorizer.fit_transform(values)
 
         with simple_timer("Run LDA"):
-            lda = LatentDirichletAllocation(n_components=n_components, learning_method='online', random_state=71,
-                                            n_jobs=-2)
+            lda = LatentDirichletAllocation(n_components=n_components, learning_method='online', random_state=71)
             components = lda.fit_transform(values)
 
         with simple_timer("Create feature matrix"):
@@ -292,8 +291,7 @@ class ItemUserLDA(FeatherFeatureDF):
             values = vectorizer.fit_transform(values)
 
         with simple_timer("Run LDA"):
-            lda = LatentDirichletAllocation(n_components=n_components, learning_method='online', random_state=71,
-                                            n_jobs=-2)
+            lda = LatentDirichletAllocation(n_components=n_components, learning_method='online', random_state=71)
             components = lda.fit_transform(values)
 
         with simple_timer("Create feature matrix"):
