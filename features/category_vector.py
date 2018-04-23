@@ -231,7 +231,10 @@ class UserItemLDA(FeatherFeatureDF):
             values = [' '.join(map(str, ls)) for ls in values]
 
         with simple_timer("Vectorize document"):
-            vectorizer = CountVectorizer(min_df=2)
+            if len(df_data) < 1000 * 1000:
+                vectorizer = CountVectorizer(min_df=1)
+            else:
+                vectorizer = CountVectorizer(min_df=2)
             values = vectorizer.fit_transform(values)
 
         with simple_timer("Run LDA"):
@@ -281,7 +284,11 @@ class ItemUserLDA(FeatherFeatureDF):
             values = [' '.join(map(str, ls)) for ls in values]
 
         with simple_timer("Vectorize document"):
-            vectorizer = CountVectorizer(min_df=1)
+            # to handle smaller data
+            if len(df_data) < 1000 * 1000:
+                vectorizer = CountVectorizer(min_df=1)
+            else:
+                vectorizer = CountVectorizer(min_df=2)
             values = vectorizer.fit_transform(values)
 
         with simple_timer("Run LDA"):
