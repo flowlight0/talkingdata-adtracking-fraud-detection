@@ -42,7 +42,6 @@ class OneVsOneCoOccurrenceLatentVector(FeatherFeaturePath):
             transformer = self.transformer_factory()
             return col1, col2, transformer.fit_transform(document_term_matrix)
 
-
     def create_features_from_path(self, train_path: str, test_path: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
         column_pairs = self.get_column_pairs()
 
@@ -160,6 +159,7 @@ class KomakiNMF5NoDevice(KomakiNMF5):
         columns = ['ip', 'app', 'os', 'channel']
         return [(col1, col2) for col1, col2 in itertools.product(columns, repeat=2) if col1 != col2]
 
+
 class SinglePCACount(FeatherFeatureDF):
     @staticmethod
     def categorical_features():
@@ -201,3 +201,107 @@ class SinglePCATfIdf(FeatherFeatureDF):
             feature_columns.append(self.name + '_{}'.format(i))
         return pd.DataFrame(data=features[:train_length], columns=feature_columns), \
                pd.DataFrame(data=features[train_length:], columns=feature_columns)
+
+
+class UserItemLDA(FeatherFeatureDF):
+    @staticmethod
+    def categorical_features():
+        return []
+
+    def create_features_from_dataframe(self, df_train: pd.DataFrame, df_test: pd.DataFrame):
+        train_length = len(df_train)
+        n_components = 30
+        df_data: pd.DataFrame = pd.concat([df_train, df_test])
+
+        with simple_timer("Create document term matrix"):
+            mask_to_id = {}
+            values = []
+            for ip, app, os, device, channel in zip(df_data.ip, df_data.app, df_data.os, df_data.device,
+                                                    df_data.channel):
+                mask = (ip << 44) | (device << 20) | (os << 10) | channel
+                if mask in mask_to_id:
+                    mask_id = mask_to_id[mask]
+                else:
+                    mask_id = len(mask_to_id)
+                    mask_to_id[mask] = mask_id
+                while len(values) <= mask_id:
+                    values.append([])
+                values[mask_id].append(app)
+        with simple_timer("Convert to documents"):
+            values = [' '.join(map(str, ls)) for ls in values]
+
+        with simple_timer("Vectorize document"):
+            vectorizer = CountVectorizer(min_df=2)
+            values = vectorizer.fit_transform(values)
+
+        with simple_timer("Run LDA"):
+            lda = LatentDirichletAllocation(n_components=n_components, learning_method='online', random_state=71,
+                                            n_jobs=-2)
+            components = lda.fit_transform(values)
+
+        with simple_timer("Create feature matrix"):
+            features = np.zeros(shape=(len(df_data), n_components), dtype=np.float32)
+            for i, (ip, app, os, device, channel) in enumerate(
+                    zip(df_data.ip, df_data.app, df_data.os, df_data.device, df_data.channel)):
+                mask = (ip << 44) | (device << 20) | (os << 10) | channel
+                mask_id = mask_to_id[mask]
+                features[i, :] = components[mask_id]
+
+        feature_columns = [self.name + '_{}'.format(i) for i in range(n_components)]
+        return pd.DataFrame(data=features[:train_length], columns=feature_columns), \
+               pd.DataFrame(data=features[train_length:], columns=feature_columns)
+
+
+class ItemUserLDA(FeatherFeatureDF):
+    @staticmethod
+    def categorical_features():
+        return []
+
+    def create_features_from_dataframe(self, df_train: pd.DataFrame, df_test: pd.DataFrame):
+        train_length = len(df_train)
+        n_components = 30
+        df_data: pd.DataFrame = pd.concat([df_train, df_test])
+
+        with simple_timer("Create document term matrix"):
+            mask_to_id = {}
+            values = []
+            for ip, app, os, device, channel in zip(df_data.ip, df_data.app, df_data.os, df_data.device,
+                                                    df_data.channel):
+                mask = (ip << 44) | (device << 20) | (os << 10) | channel
+                if mask in mask_to_id:
+                    mask_id = mask_to_id[mask]
+                else:
+                    mask_id = len(mask_to_id)
+                    mask_to_id[mask] = mask_id
+                while len(values) <= app:
+                    values.append([])
+                values[app].append(mask_id)
+
+        with simple_timer("Convert to documents"):
+            values = [' '.join(map(str, ls)) for ls in values]
+
+        with simple_timer("Vectorize document"):
+            vectorizer = CountVectorizer(min_df=1)
+            values = vectorizer.fit_transform(values)
+
+        with simple_timer("Run LDA"):
+            lda = LatentDirichletAllocation(n_components=n_components, learning_method='online', random_state=71,
+                                            n_jobs=-2)
+            components = lda.fit_transform(values)
+
+        with simple_timer("Create feature matrix"):
+            features = np.zeros(shape=(len(df_data), n_components), dtype=np.float32)
+            for i, (ip, app, os, device, channel) in enumerate(
+                    zip(df_data.ip, df_data.app, df_data.os, df_data.device, df_data.channel)):
+                features[i, :] = components[app]
+
+        feature_columns = [self.name + '_{}'.format(i) for i in range(n_components)]
+        return pd.DataFrame(data=features[:train_length], columns=feature_columns), \
+               pd.DataFrame(data=features[train_length:], columns=feature_columns)
+
+
+if __name__ == '__main__':
+    df_train = pd.read_feather('../data/input/train.feather.small')
+    df_test = pd.read_feather('../data/input/test.feather.small')
+    lda = UserItemLDA('')
+    lda.create_features_from_dataframe(df_train, df_test)

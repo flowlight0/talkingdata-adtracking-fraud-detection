@@ -61,7 +61,9 @@ unparallelizable_feature_map = {
     'komaki_nmf_5_no_device': features.category_vector.KomakiNMF5NoDevice,
     'single_pca_count': features.category_vector.SinglePCACount,
     'single_pca_tfidf': features.category_vector.SinglePCATfIdf,
-    'komaki_lda_5_mindf_1': features.category_vector.KomakiLDA5MinDF1
+    'komaki_lda_5_mindf_1': features.category_vector.KomakiLDA5MinDF1,
+    "user_item_lda_30": features.category_vector.UserItemLDA,
+    "item_user_lda_30": features.category_vector.ItemUserLDA,
 }
 
 models = {
