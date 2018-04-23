@@ -5,8 +5,6 @@
     "app",
     "channel",
     "hour",
-    "minute",
-    "second",
     "count",
     "future_click_count_10",
     "future_click_count_80",

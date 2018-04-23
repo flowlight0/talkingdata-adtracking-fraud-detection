@@ -16,7 +16,8 @@ import pandas.testing
 import features.time_series_click
 import features.category_vector
 from features import Feature
-from features.basic import Ip, App, Os, Device, Channel, ClickHour, BasicCount, IsAttributed, ClickSecond, ClickMinute
+from features.basic import Ip, App, Os, Device, Channel, ClickHour, BasicCount, IsAttributed, ClickSecond, ClickMinute, \
+    ClickTime
 from models import LightGBM, Model
 from utils import dump_json_log, simple_timer
 
@@ -27,6 +28,7 @@ parallelizable_feature_map = {
     'device': Device,
     'channel': Channel,
     'hour': ClickHour,
+    'click_time': ClickTime,
     'minute': ClickSecond,
     'second': ClickMinute,
     'count': BasicCount,
@@ -140,8 +142,7 @@ def get_parallelizable_feature_list(config) -> List[str]:
         assert feature in parallelizable_feature_map or feature in unparallelizable_feature_map, \
             "Unknown feature {}".format(feature)
     features = [feature for feature in config['features'] if feature in parallelizable_feature_map]
-    features.append(target_variable)
-    return features
+    return [*features, target_variable, 'click_time']
 
 
 def get_unparallelizable_feature_list(config) -> List[str]:
@@ -235,10 +236,9 @@ def main():
         with simple_timer("Load train features"):
             sampled_train_dataset = load_train_dataset(sampled_train_feature_paths)
 
-        valid_ratio = config["dataset"]["validation_ratio"] if "validation_ratio" in config["dataset"] else 0.9
-        train_length = int(len(sampled_train_dataset) * valid_ratio)
-        sampled_train_data = sampled_train_dataset[:train_length]
-        sampled_valid_data = sampled_train_dataset[train_length:]
+        threshold = pd.Timestamp('2017-11-08 16:00:00')
+        sampled_train_data = sampled_train_dataset[sampled_train_dataset.click_time < threshold].drop('click_time', axis=1)
+        sampled_valid_data = sampled_train_dataset[sampled_train_dataset.click_time >= threshold].drop('click_time', axis=1)
         predictors = sampled_train_data.columns.drop(target_variable)
         gc.collect()
 
@@ -248,14 +248,9 @@ def main():
                                                       categorical_features=categorical_features,
                                                       target=target_variable,
                                                       params=config['model'])
-        if "full_data_train" in config["dataset"] and config["dataset"]["full_data_train"]:
-            sampled_train_data_with_fixed_iteration = sampled_train_dataset
-        else:
-            sampled_train_data_with_fixed_iteration = sampled_train_dataset[len(sampled_train_dataset) - train_length:]
-
         best_iteration = booster.best_iteration
         with simple_timer("Train model without validation"):
-            booster = model.train_without_validation(train=sampled_train_data_with_fixed_iteration,
+            booster = model.train_without_validation(train=sampled_train_data,
                                                      categorical_features=categorical_features,
                                                      target=target_variable,
                                                      params=config['model'],

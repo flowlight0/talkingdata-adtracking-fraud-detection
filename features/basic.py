@@ -78,6 +78,17 @@ class ClickMinute(FeatherFeatureDF):
         return df_train[['minute']], df_test[['minute']]
 
 
+# Actually this is used for splitting dataset
+class ClickTime(FeatherFeatureDF):
+    @staticmethod
+    def categorical_features():
+        # We don't use 'day' information because time span of our dataset is too short
+        return []
+
+    def create_features_from_dataframe(self, df_train: pd.DataFrame, df_test: pd.DataFrame):
+        return df_train[['click_time']], df_test[['click_time']]
+
+
 class BasicCount(FeatherFeatureDF):
     @staticmethod
     def categorical_features():
@@ -136,4 +147,3 @@ class IsAttributed(FeatherFeatureDF):
     def create_features_from_dataframe(self, df_train: pd.DataFrame, df_test: pd.DataFrame):
         df_test['is_attributed'] = np.zeros(len(df_test), dtype=np.uint8)
         return df_train[['is_attributed']], df_test[['is_attributed']]
-
