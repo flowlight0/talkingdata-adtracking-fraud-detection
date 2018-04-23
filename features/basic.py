@@ -54,6 +54,30 @@ class ClickHour(FeatherFeatureDF):
         return df_train[['hour']], df_test[['hour']]
 
 
+class ClickSecond(FeatherFeatureDF):
+    @staticmethod
+    def categorical_features():
+        # We don't use 'day' information because time span of our dataset is too short
+        return ['second']
+
+    def create_features_from_dataframe(self, df_train: pd.DataFrame, df_test: pd.DataFrame):
+        df_train['second'] = pd.to_datetime(df_train.click_time).dt.second.astype('uint8')
+        df_test['second'] = pd.to_datetime(df_test.click_time).dt.second.astype('uint8')
+        return df_train[['second']], df_test[['second']]
+
+
+class ClickMinute(FeatherFeatureDF):
+    @staticmethod
+    def categorical_features():
+        # We don't use 'day' information because time span of our dataset is too short
+        return ['minute']
+
+    def create_features_from_dataframe(self, df_train: pd.DataFrame, df_test: pd.DataFrame):
+        df_train['minute'] = pd.to_datetime(df_train.click_time).dt.minute.astype('uint8')
+        df_test['minute'] = pd.to_datetime(df_test.click_time).dt.minute.astype('uint8')
+        return df_train[['minute']], df_test[['minute']]
+
+
 class BasicCount(FeatherFeatureDF):
     @staticmethod
     def categorical_features():

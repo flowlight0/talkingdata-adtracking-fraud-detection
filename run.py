@@ -16,7 +16,7 @@ import pandas.testing
 import features.time_series_click
 import features.category_vector
 from features import Feature
-from features.basic import Ip, App, Os, Device, Channel, ClickHour, BasicCount, IsAttributed
+from features.basic import Ip, App, Os, Device, Channel, ClickHour, BasicCount, IsAttributed, ClickSecond, ClickMinute
 from models import LightGBM, Model
 from utils import dump_json_log, simple_timer
 
@@ -27,6 +27,8 @@ parallelizable_feature_map = {
     'device': Device,
     'channel': Channel,
     'hour': ClickHour,
+    'minute': ClickSecond,
+    'second': ClickMinute,
     'count': BasicCount,
     'is_attributed': IsAttributed,
     'future_click_count_1': features.time_series_click.generate_future_click_count(60),
