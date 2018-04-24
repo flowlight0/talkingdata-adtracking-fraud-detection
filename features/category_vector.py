@@ -211,6 +211,7 @@ class UserItemLDA(FeatherFeatureDF):
     def create_features_from_dataframe(self, df_train: pd.DataFrame, df_test: pd.DataFrame):
         train_length = len(df_train)
         n_components = 30
+        threshold = 3
         df_data: pd.DataFrame = pd.concat([df_train, df_test])
 
         with simple_timer("Create document term matrix"):
@@ -227,8 +228,21 @@ class UserItemLDA(FeatherFeatureDF):
                 while len(values) <= mask_id:
                     values.append([])
                 values[mask_id].append(app)
+        with simple_timer("Create new mask id"):
+            new_values = []
+            new_mask_to_id = {}
+            for mask, mask_id in mask_to_id.items():
+                if len(values[mask_id]) >= threshold:
+                    new_mask_id = len(new_values)
+                    new_values.append(values[mask_id])
+                    new_mask_to_id[mask] = new_mask_id
+            values = new_values
+            mask_to_id = new_mask_to_id
+            del new_values, new_mask_to_id
+
         with simple_timer("Convert to documents"):
             values = [' '.join(map(str, ls)) for ls in values]
+            print("Number of documents", len(values))
 
         with simple_timer("Vectorize document"):
             if len(df_data) < 1000 * 1000:
@@ -246,8 +260,9 @@ class UserItemLDA(FeatherFeatureDF):
             for i, (ip, app, os, device, channel) in enumerate(
                     zip(df_data.ip, df_data.app, df_data.os, df_data.device, df_data.channel)):
                 mask = (ip << 44) | (device << 20) | (os << 10) | channel
-                mask_id = mask_to_id[mask]
-                features[i, :] = components[mask_id]
+                if mask in mask_to_id:
+                    mask_id = mask_to_id[mask]
+                    features[i, :] = components[mask_id]
 
         feature_columns = [self.name + '_{}'.format(i) for i in range(n_components)]
         return pd.DataFrame(data=features[:train_length], columns=feature_columns), \
