@@ -99,6 +99,7 @@ class FeatherFeatureCalculator {
   std::vector<uint16_t> os;
   std::vector<uint16_t> channel;
   std::vector<uint64_t> click_time;
+  std::vector<uint64_t> attributed_time;
   std::vector<uint8_t> is_attributed;
   uint64_t train_size;
   uint64_t test_size;

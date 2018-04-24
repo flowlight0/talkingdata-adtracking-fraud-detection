@@ -236,6 +236,26 @@ class CumulativeClickCountFuture(FeatherFeatureCommand):
     def categorical_features():
         return []
 
+
+class MedianAttributeTime(FeatherFeatureCommand):
+    @staticmethod
+    def get_command_name():
+        return 'median_attribute_time_main'
+
+    @staticmethod
+    def categorical_features():
+        return []
+
+
+class MedianAttributeTimePast(FeatherFeatureCommand):
+    @staticmethod
+    def get_command_name():
+        return 'median_attribute_time_past_main'
+
+    @staticmethod
+    def categorical_features():
+        return []
+
 # class NextApp(FeatherFeature):
 #     def create_features_impl(self, train_path, valid_input, test_path, train_output, valid_output, test_feature_path):
 #         args = [os.path.join(os.path.dirname(__file__), '../cpp/next_app_main'), train_path,
