@@ -252,7 +252,7 @@ def main():
                                                       params=config['model'])
         best_iteration = booster.best_iteration
         with simple_timer("Train model without validation"):
-            booster = model.train_without_validation(train=sampled_train_dataset,
+            booster = model.train_without_validation(train=sampled_train_dataset.drop('click_time', axis=1),
                                                      categorical_features=categorical_features,
                                                      target=target_variable,
                                                      params=config['model'],
