@@ -78,6 +78,17 @@ class ClickMinute(FeatherFeatureDF):
         return df_train[['minute']], df_test[['minute']]
 
 
+class ZeroMinute(FeatherFeatureDF):
+    @staticmethod
+    def categorical_features():
+        return []
+
+    def create_features_from_dataframe(self, df_train: pd.DataFrame, df_test: pd.DataFrame):
+        df_train['zero-minute'] = pd.to_datetime(df_train.click_time).dt.minute.astype('uint8') == 0
+        df_test['zero-minute'] = pd.to_datetime(df_test.click_time).dt.minute.astype('uint8') == 0
+        return df_train[['zero-minute']], df_test[['zero-minute']]
+
+
 # Actually this is used for splitting dataset
 class ClickTime(FeatherFeatureDF):
     @staticmethod

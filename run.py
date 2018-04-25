@@ -17,7 +17,7 @@ import features.time_series_click
 import features.category_vector
 from features import Feature
 from features.basic import Ip, App, Os, Device, Channel, ClickHour, BasicCount, IsAttributed, ClickSecond, ClickMinute, \
-    ClickTime
+    ClickTime, ZeroMinute
 from models import LightGBM, Model
 from utils import dump_json_log, simple_timer
 
@@ -33,6 +33,7 @@ parallelizable_feature_map = {
     'second': ClickMinute,
     'count': BasicCount,
     'is_attributed': IsAttributed,
+    'zero-minute': ZeroMinute,
     'future_click_count_1': features.time_series_click.generate_future_click_count(60),
     'future_click_count_10': features.time_series_click.generate_future_click_count(600),
     'past_click_count_10': features.time_series_click.generate_past_click_count(600),
