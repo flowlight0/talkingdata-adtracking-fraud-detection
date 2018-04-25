@@ -256,6 +256,16 @@ class MedianAttributeTimePast(FeatherFeatureCommand):
     def categorical_features():
         return []
 
+
+class MedianAttributeTimePastV2(FeatherFeatureCommand):
+    @staticmethod
+    def get_command_name():
+        return 'median_attribute_time_past_v2_main'
+
+    @staticmethod
+    def categorical_features():
+        return []
+
 # class NextApp(FeatherFeature):
 #     def create_features_impl(self, train_path, valid_input, test_path, train_output, valid_output, test_feature_path):
 #         args = [os.path.join(os.path.dirname(__file__), '../cpp/next_app_main'), train_path,

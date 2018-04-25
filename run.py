@@ -51,7 +51,8 @@ parallelizable_feature_map = {
     'cumulative_click_count': features.time_series_click.CumulativeClickCount,
     'cumulative_click_count_future': features.time_series_click.CumulativeClickCountFuture,
     'median_attribute_time': features.time_series_click.MedianAttributeTime,
-    'median_attribute_time_past': features.time_series_click.MedianAttributeTimePast
+    'median_attribute_time_past': features.time_series_click.MedianAttributeTimePast,
+    'median_attribute_time_past_v2': features.time_series_click.MedianAttributeTimePastV2
 }
 
 unparallelizable_feature_map = {
