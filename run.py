@@ -78,6 +78,8 @@ output_directory = 'data/output'
 
 target_variable = 'is_attributed'
 
+in_test_hours = {4, 5, 9, 10, 13, 14}
+
 
 # Now we don't set index when loading training features because they should have been already down-sampled.
 def load_dataset(paths, index=None) -> pd.DataFrame:
@@ -242,9 +244,16 @@ def main():
         with simple_timer("Load train features"):
             sampled_train_dataset = load_train_dataset(sampled_train_feature_paths)
 
+        # Hard-coded threshold, last one day of training dataset is used for validation
         threshold = pd.Timestamp('2017-11-08 16:00:00')
         sampled_train_data = sampled_train_dataset[sampled_train_dataset.click_time < threshold].drop('click_time', axis=1)
         sampled_valid_data = sampled_train_dataset[sampled_train_dataset.click_time >= threshold].drop('click_time', axis=1)
+
+        if config.get('test_hours', {}).get('filter_validation', False):
+            assert 'hour' in sampled_valid_data.columns, "This script now assumes we include 'hour' in features. " \
+                                                         "Sorry for bad implementation:) "
+            sampled_valid_data = sampled_valid_data[sampled_valid_data.hour.isin(in_test_hours)]
+
         predictors = sampled_train_data.columns.drop(target_variable)
         gc.collect()
 
@@ -274,9 +283,9 @@ def main():
         })
         print("Finished {}-th bag training: {}".format(i, str(train_results[-1])))
 
+    dump_json_log(options, train_results, output_directory)
     if not options.train_only:
         prepare_submission(options, prediction_boosters, predictors, test_feature_paths)
-    dump_json_log(options, train_results, output_directory)
 
 
 def split_index(df, num_splits=5):
