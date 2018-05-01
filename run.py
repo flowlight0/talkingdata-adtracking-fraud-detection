@@ -242,17 +242,25 @@ def main():
     for i, sampled_train_feature_paths in enumerate(sampled_train_feature_paths_list):
         start_time = time.time()
         with simple_timer("Load train features"):
-            sampled_train_dataset = load_train_dataset(sampled_train_feature_paths)
+            sampled_train_data_all = load_train_dataset(sampled_train_feature_paths)
 
         # Hard-coded threshold, last one day of training dataset is used for validation
         threshold = pd.Timestamp('2017-11-08 16:00:00')
-        sampled_train_data = sampled_train_dataset[sampled_train_dataset.click_time < threshold].drop('click_time', axis=1)
-        sampled_valid_data = sampled_train_dataset[sampled_train_dataset.click_time >= threshold].drop('click_time', axis=1)
+        sampled_train_data = sampled_train_data_all[sampled_train_data_all.click_time < threshold].drop('click_time', axis=1)
+        sampled_valid_data = sampled_train_data_all[sampled_train_data_all.click_time >= threshold].drop('click_time', axis=1)
 
+        sampled_train_data_weight = None
+        sampled_train_data_all_weight = None
         if config.get('test_hours', {}).get('filter_validation', False):
             assert 'hour' in sampled_valid_data.columns, "This script now assumes we include 'hour' in features. " \
                                                          "Sorry for bad implementation:) "
+
+            weight = config.get('test_hours').get("train_weight", 1.0)
             sampled_valid_data = sampled_valid_data[sampled_valid_data.hour.isin(in_test_hours)]
+            sampled_train_data_weight = np.ones(len(sampled_train_data))
+            sampled_train_data_weight[sampled_train_data.hour.isin(in_test_hours)] = weight
+            sampled_train_data_all_weight = np.ones(len(sampled_train_data_all))
+            sampled_train_data_all_weight[sampled_train_data_all.hour.isin(in_test_hours)] = weight
 
         predictors = sampled_train_data.columns.drop(target_variable)
         gc.collect()
@@ -260,12 +268,14 @@ def main():
         with simple_timer("Train model with validation"):
             booster, result = model.train_and_predict(train=sampled_train_data,
                                                       valid=sampled_valid_data,
+                                                      weight=sampled_train_data_weight,
                                                       categorical_features=categorical_features,
                                                       target=target_variable,
                                                       params=config['model'])
         best_iteration = booster.best_iteration
         with simple_timer("Train model without validation"):
-            booster = model.train_without_validation(train=sampled_train_dataset.drop('click_time', axis=1),
+            booster = model.train_without_validation(train=sampled_train_data_all.drop('click_time', axis=1),
+                                                     weight=sampled_train_data_all_weight,
                                                      categorical_features=categorical_features,
                                                      target=target_variable,
                                                      params=config['model'],
