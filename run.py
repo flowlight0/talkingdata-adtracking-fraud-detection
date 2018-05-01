@@ -242,12 +242,12 @@ def main():
     for i, sampled_train_feature_paths in enumerate(sampled_train_feature_paths_list):
         start_time = time.time()
         with simple_timer("Load train features"):
-            sampled_train_data_all = load_train_dataset(sampled_train_feature_paths)
+            sampled_all_train = load_train_dataset(sampled_train_feature_paths)
 
         # Hard-coded threshold, last one day of training dataset is used for validation
         threshold = pd.Timestamp('2017-11-08 16:00:00')
-        sampled_train_data = sampled_train_data_all[sampled_train_data_all.click_time < threshold].drop('click_time', axis=1)
-        sampled_valid_data = sampled_train_data_all[sampled_train_data_all.click_time >= threshold].drop('click_time', axis=1)
+        sampled_train_data = sampled_all_train[sampled_all_train.click_time < threshold].drop('click_time', axis=1)
+        sampled_valid_data = sampled_all_train[sampled_all_train.click_time >= threshold].drop('click_time', axis=1)
 
         sampled_train_data_weight = None
         sampled_train_data_all_weight = None
@@ -259,8 +259,8 @@ def main():
             sampled_valid_data = sampled_valid_data[sampled_valid_data.hour.isin(in_test_hours)]
             sampled_train_data_weight = np.ones(len(sampled_train_data))
             sampled_train_data_weight[sampled_train_data.hour.isin(in_test_hours)] = weight
-            sampled_train_data_all_weight = np.ones(len(sampled_train_data_all))
-            sampled_train_data_all_weight[sampled_train_data_all.hour.isin(in_test_hours)] = weight
+            sampled_train_data_all_weight = np.ones(len(sampled_all_train))
+            sampled_train_data_all_weight[sampled_all_train.hour.isin(in_test_hours)] = weight
 
         predictors = sampled_train_data.columns.drop(target_variable)
         gc.collect()
@@ -274,7 +274,7 @@ def main():
                                                       params=config['model'])
         best_iteration = booster.best_iteration
         with simple_timer("Train model without validation"):
-            booster = model.train_without_validation(train=sampled_train_data_all.drop('click_time', axis=1),
+            booster = model.train_without_validation(train=sampled_all_train.drop('click_time', axis=1),
                                                      weight=sampled_train_data_all_weight,
                                                      categorical_features=categorical_features,
                                                      target=target_variable,
@@ -325,7 +325,7 @@ def prepare_submission(options, prediction_boosters: List, predictors: List[str]
         del required_ids
         gc.collect()
 
-    bagging_predictions = [[] for _ in prediction_boosters]
+    old_bagging_predictions = [[] for _ in prediction_boosters]
     for i, sub_index in enumerate(split_index(df_test)):
         with simple_timer("Load {}-th test features batch".format(i)):
             test_data = load_dataset(test_feature_paths, sub_index)
@@ -335,23 +335,41 @@ def prepare_submission(options, prediction_boosters: List, predictors: List[str]
         with simple_timer("Create prediction on {}-th test features batch".format(i)):
             for j, booster in enumerate(prediction_boosters):
                 prediction = booster.predict(test_data[predictors])
-                bagging_predictions[j].extend(list(prediction))
+                old_bagging_predictions[j].extend(list(prediction))
 
-    df_test['prediction'] = sum(np.array(pred) for pred in bagging_predictions) / len(bagging_predictions)
-    old_click_to_prediction = {cid: pred for (cid, pred) in zip(df_test.click_id, df_test.prediction)}
+    old_click_to_predictions = []
+    for i, old_bagging_prediction in enumerate(old_bagging_predictions):
+        old_click_to_prediction = {cid: pred for (cid, pred) in zip(df_test.click_id, old_bagging_prediction)}
+        old_click_to_predictions.append(old_click_to_prediction)
 
     click_ids = []
-    predictions = []
+    predictions = [[] for _ in range(len(old_click_to_predictions))]
     for (new_click_id, old_click_id) in zip(id_mapper.new_click_id, id_mapper.old_click_id):
-        if old_click_id not in old_click_to_prediction:
+        if old_click_id not in old_click_to_predictions[0]:
             continue
         click_ids.append(new_click_id)
-        predictions.append(old_click_to_prediction[old_click_id])
-    submission = pd.DataFrame({'click_id': click_ids, '{}'.format(target_variable): predictions})
+        for i, old_click_to_prediction in enumerate(old_click_to_predictions):
+            predictions[i].append(old_click_to_prediction[old_click_id])
+
+    submission = pd.DataFrame({'click_id': click_ids})
+    pred_columns = []
+    rank_columns = []
+    for i, prediction in enumerate(predictions):
+        pred_column = 'pred-{}'.format(i)
+        rank_column = 'rank-{}'.format(i)
+        submission[pred_column] = prediction
+        submission[rank_column] =  submission[pred_column].rank()
+        pred_columns.append(pred_column)
+        rank_columns.append(rank_column)
+
+    if config.get('rank_average', False):
+        submission[target_variable] = submission[rank_columns].mean(axis=1) / (len(submission))
+    else:
+        submission[target_variable] = submission[pred_columns].mean(axis=1)
+
     submission_path = os.path.join(os.path.dirname(__file__), output_directory,
                                    os.path.basename(options.config) + '.submission.csv')
-    submission.sort_values(by='click_id').to_csv(submission_path, index=False)
-
+    submission[['click_id', target_variable]].sort_values(by='click_id').to_csv(submission_path, index=False)
 
 if __name__ == "__main__":
     main()
