@@ -59,6 +59,8 @@ parallelizable_feature_map = {
 unparallelizable_feature_map = {
     'komaki_lda_5': features.category_vector.KomakiLDA5,
     'komaki_lda_5_no_device': features.category_vector.KomakiLDA5NoDevice,
+    'komaki_lda_10_no_device_1': features.category_vector.KomakiLDA10NoDevice_1,
+    'komaki_lda_10_no_device_2': features.category_vector.KomakiLDA10NoDevice_2,
     'komaki_pca_5': features.category_vector.KomakiPCA5,
     'komaki_pca_5_no_device': features.category_vector.KomakiPCA5NoDevice,
     'komaki_nmf_5': features.category_vector.KomakiNMF5,

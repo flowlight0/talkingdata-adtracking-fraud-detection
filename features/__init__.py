@@ -4,6 +4,7 @@ import time
 from abc import ABC, abstractmethod
 from typing import List, Tuple
 
+import gc
 import pandas as pd
 
 
@@ -85,6 +86,7 @@ class FeatherFeaturePath(FeatherFeature):
         for train_feature_path, index in train_feature_paths:
             train_feature.loc[index].reset_index(drop=True).to_feather(train_feature_path)
         test_feature.to_feather(test_feature_path)
+        gc.collect()
 
     def create_features_from_path(self, train_path: str, test_path: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
         raise NotImplementedError

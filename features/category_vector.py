@@ -124,6 +124,38 @@ class KomakiLDA5MinDF1(OneVsOneCoOccurrenceLatentVector):
         return 5
 
 
+class KomakiLDA10NoDevice_1(OneVsOneCoOccurrenceLatentVector):
+    def get_column_pairs(self):
+        columns = ['ip', 'app', 'os', 'channel']
+        return [(col1, col2) for col1, col2 in itertools.product(columns, repeat=2) if col1 < col2]
+
+    def transformer_factory(self):
+        return LatentDirichletAllocation(n_components=self.width, learning_method='online', random_state=71)
+
+    @property
+    def width(self) -> int:
+        return 10
+
+    def vectorizer_factory(self):
+        return CountVectorizer(min_df=1, dtype=np.int32)
+
+
+class KomakiLDA10NoDevice_2(OneVsOneCoOccurrenceLatentVector):
+    def get_column_pairs(self):
+        columns = ['ip', 'app', 'os', 'channel']
+        return [(col1, col2) for col1, col2 in itertools.product(columns, repeat=2) if col1 > col2]
+
+    def transformer_factory(self):
+        return LatentDirichletAllocation(n_components=self.width, learning_method='online', random_state=71)
+
+    @property
+    def width(self) -> int:
+        return 10
+
+    def vectorizer_factory(self):
+        return CountVectorizer(min_df=1, dtype=np.int32)
+
+
 class KomakiPCA5(OneVsOneCoOccurrenceLatentVector):
     def vectorizer_factory(self):
         return TfidfVectorizer(min_df=2, dtype=np.float32)
