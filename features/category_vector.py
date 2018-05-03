@@ -48,6 +48,7 @@ class OneVsOneCoOccurrenceLatentVector(FeatherFeaturePath):
         col1s = []
         col2s = []
         latent_vectors = []
+        gc.collect()
         with Pool(4) as p:
             for col1, col2, latent_vector in p.map(
                     partial(self.compute_latent_vectors, train_path=train_path, test_path=test_path), column_pairs):
@@ -55,7 +56,6 @@ class OneVsOneCoOccurrenceLatentVector(FeatherFeaturePath):
                 col2s.append(col2)
                 latent_vectors.append(latent_vector.astype(np.float32))
         gc.collect()
-
         return self.get_feature(train_path, col1s, col2s, latent_vectors), \
                self.get_feature(test_path, col1s, col2s, latent_vectors)
 

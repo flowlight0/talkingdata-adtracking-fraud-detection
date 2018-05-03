@@ -86,6 +86,7 @@ class FeatherFeaturePath(FeatherFeature):
         for train_feature_path, index in train_feature_paths:
             train_feature.loc[index].reset_index(drop=True).to_feather(train_feature_path)
         test_feature.to_feather(test_feature_path)
+        del train_feature, test_feature
         gc.collect()
 
     def create_features_from_path(self, train_path: str, test_path: str) -> Tuple[pd.DataFrame, pd.DataFrame]:
