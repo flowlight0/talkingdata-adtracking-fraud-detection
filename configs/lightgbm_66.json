@@ -20,9 +20,9 @@
       "objective": "binary",
       "metric": "auc",
       "learning_rate": 0.03,
-      "num_leaves": 255,
-      "max_depth": 8,
-      "min_child_samples": 20,
+      "num_leaves": 64,
+      "max_depth": -1,
+      "min_child_samples": 10,
       "max_bin": 100,
       "subsample": 0.7,
       "subsample_freq": 1,
@@ -52,5 +52,5 @@
     }
   },
   "rank_average": true,
-  "note": "62 with min_child_samples = 20"
+  "note": "62 + num_leaves = 64 & max_depth = -1"
 }

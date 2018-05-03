@@ -23,7 +23,6 @@
       "num_leaves": 255,
       "max_depth": 8,
       "min_child_samples": 20,
-      "max_bin": 100,
       "subsample": 0.7,
       "subsample_freq": 1,
       "colsample_bytree": 0.7,
@@ -52,5 +51,5 @@
     }
   },
   "rank_average": true,
-  "note": "62 with min_child_samples = 20"
+  "note": "62 with min_child_samples = 20 and max_bin = 255"
 }
