@@ -275,14 +275,15 @@ def main():
                                                       target=target_variable,
                                                       params=config['model'])
         best_iteration = booster.best_iteration
-        with simple_timer("Train model without validation"):
-            booster = model.train_without_validation(train=sampled_all_train.drop('click_time', axis=1),
-                                                     weight=sampled_train_data_all_weight,
-                                                     categorical_features=categorical_features,
-                                                     target=target_variable,
-                                                     params=config['model'],
-                                                     best_iteration=best_iteration)
-            prediction_boosters.append(booster)
+        if not options.train_only:
+            with simple_timer("Train model without validation"):
+                booster = model.train_without_validation(train=sampled_all_train.drop('click_time', axis=1),
+                                                         weight=sampled_train_data_all_weight,
+                                                         categorical_features=categorical_features,
+                                                         target=target_variable,
+                                                         params=config['model'],
+                                                         best_iteration=best_iteration)
+                prediction_boosters.append(booster)
 
         # This only works when we are using LightGBM
         train_results.append({
