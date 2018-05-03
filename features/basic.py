@@ -158,3 +158,30 @@ class IsAttributed(FeatherFeatureDF):
     def create_features_from_dataframe(self, df_train: pd.DataFrame, df_test: pd.DataFrame):
         df_test['is_attributed'] = np.zeros(len(df_test), dtype=np.uint8)
         return df_train[['is_attributed']], df_test[['is_attributed']]
+
+
+class DuplicatedRowIndexDiff(FeatherFeatureDF):
+    @staticmethod
+    def categorical_features():
+        return []
+
+    def create_features_from_dataframe(self, df_train: pd.DataFrame, df_test: pd.DataFrame):
+        return self.calculate(df_train), self.calculate(df_test)
+
+    @staticmethod
+    def calculate(df: pd.DataFrame):
+        is_duplicated = df.duplicated(subset=['ip', 'device', 'os', 'channel', 'app', 'click_time'], keep=False)
+        features = np.zeros(len(df))
+        features[~is_duplicated] = np.nan
+
+        curr_start_index = None
+        prev_columns = None
+        dup_df = df[is_duplicated]
+        dup_rows = zip(dup_df.ip, dup_df.device, dup_df.os, dup_df.channel, dup_df.app, dup_df.click_time)
+        for index, curr_columns in zip(dup_df.index, zip(dup_rows)):
+            if prev_columns != curr_columns:
+                curr_start_index = index
+            features[index] = index - curr_start_index
+            prev_columns = curr_columns
+        df['DuplicateRowIndexDiff'] = features
+        return df[['DuplicateRowIndexDiff']]

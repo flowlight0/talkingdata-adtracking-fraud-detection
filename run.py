@@ -17,7 +17,7 @@ import features.time_series_click
 import features.category_vector
 from features import Feature
 from features.basic import Ip, App, Os, Device, Channel, ClickHour, BasicCount, IsAttributed, ClickSecond, ClickMinute, \
-    ClickTime, ZeroMinute
+    ClickTime, ZeroMinute, DuplicatedRowIndexDiff
 from models import LightGBM, Model
 from utils import dump_json_log, simple_timer
 
@@ -53,7 +53,8 @@ parallelizable_feature_map = {
     'cumulative_click_count_future': features.time_series_click.CumulativeClickCountFuture,
     'median_attribute_time': features.time_series_click.MedianAttributeTime,
     'median_attribute_time_past': features.time_series_click.MedianAttributeTimePast,
-    'median_attribute_time_past_v2': features.time_series_click.MedianAttributeTimePastV2
+    'median_attribute_time_past_v2': features.time_series_click.MedianAttributeTimePastV2,
+    'duplicated_row_index_diff': DuplicatedRowIndexDiff
 }
 
 unparallelizable_feature_map = {
