@@ -14,7 +14,7 @@ RUN conda install numba
 
 # setup jupyter notebook configuration
 RUN pip install --upgrade jupyter
-RUN jupyter-notebook --generate-config
+RUN jupyter-notebook --generate-config --allow-root
 ADD ./jupyter/jupyter_notebook_config.py /root/.jupyter/jupyter_notebook_config.py
 ARG JUPYTER_PASSWORD_HASH
 RUN echo "c.NotebookApp.password = \"${JUPYTER_PASSWORD_HASH}\"" >> /root/.jupyter/jupyter_notebook_config.py
