@@ -207,6 +207,16 @@ class AllClickCount(FeatherFeatureCommand):
         return []
 
 
+class HourlyClickCount(FeatherFeatureCommand):
+    @staticmethod
+    def get_command_name():
+        return 'hourly_click_count_main'
+
+    @staticmethod
+    def categorical_features():
+        return []
+
+
 class AverageAttributedRatio(FeatherFeatureCommand):
     @staticmethod
     def get_command_name():

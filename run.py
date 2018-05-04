@@ -48,6 +48,7 @@ parallelizable_feature_map = {
     'exact_same_click': features.time_series_click.ExactSameClick,  # It will be duplicated with all id counts
     'exact_same_click_id': features.time_series_click.ExactSameClickId,
     'all_click_count': features.time_series_click.AllClickCount,
+    'hourly_click_count': features.time_series_click.HourlyClickCount,
     'average_attributed_ratio': features.time_series_click.AverageAttributedRatio,
     'cumulative_click_count': features.time_series_click.CumulativeClickCount,
     'cumulative_click_count_future': features.time_series_click.CumulativeClickCountFuture,
