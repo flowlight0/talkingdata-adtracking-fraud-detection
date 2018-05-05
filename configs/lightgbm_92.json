@@ -1,0 +1,58 @@
+{
+  "features": [
+    "app",
+    "hour",
+    "count",
+    "duplicated_row_index_diff",
+    "future_click_count_10",
+    "future_click_count_80",
+    "next_click_time_delta",
+    "prev_click_time_delta",
+    "all_click_count",
+    "average_attributed_ratio",
+    "komaki_lda_20_no_device_ip",
+    "komaki_lda_20_no_device_os",
+    "komaki_lda_20_no_device_app",
+    "komaki_lda_5_no_device",
+    "komaki_nmf_5_no_device",
+    "komaki_pca_5_no_device"
+  ],
+  "model": {
+    "name": "lightgbm",
+    "model_params": {
+      "boosting_type": "gbdt",
+      "objective": "binary",
+      "metric": "auc",
+      "learning_rate": 0.03,
+      "num_leaves": 255,
+      "max_depth": 8,
+      "min_child_samples": 50,
+      "subsample": 0.9,
+      "subsample_freq": 1,
+      "colsample_bytree": 0.7,
+      "min_child_weight": 0,
+      "subsample_for_bin": 1000000,
+      "min_split_gain": 0,
+      "reg_lambda": 0,
+      "verbose": 0
+    },
+    "train_params": {
+      "num_boost_round": 2000,
+      "early_stopping_rounds": 30
+    }
+  },
+  "dataset": {
+    "input_directory": "data/input/",
+    "cache_directory": "data/working/",
+    "files": {
+      "train": "train.feather",
+      "test": "old_test.feather"
+    },
+    "negative_down_sampling": {
+      "enabled": true,
+      "bagging_size": 5
+    }
+  },
+  "rank_average": false,
+  "note": "89 - komaki_lda_20_no_device_channel"
+}
