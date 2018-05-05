@@ -14,8 +14,6 @@
     "komaki_lda_20_no_device_os",
     "komaki_lda_20_no_device_channel",
     "komaki_lda_20_no_device_app",
-    "komaki_lda_10_no_device_1",
-    "komaki_lda_10_no_device_2",
     "komaki_lda_5_no_device",
     "komaki_nmf_5_no_device",
     "komaki_pca_5_no_device"
