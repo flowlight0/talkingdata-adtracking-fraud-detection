@@ -10,7 +10,7 @@
     "prev_click_time_delta",
     "all_click_count",
     "average_attributed_ratio",
-    "komaki_lda_20_ip",
+    "komaki_lda_30_ip",
     "komaki_lda_20_no_device_os",
     "komaki_lda_20_no_device_channel",
     "komaki_lda_20_no_device_app",
@@ -55,5 +55,5 @@
     }
   },
   "rank_average": false,
-  "note": "84 + lda5"
+  "note": "89 + komaki_lda_30_ip - komaki_lda_20_no_device_ip"
 }

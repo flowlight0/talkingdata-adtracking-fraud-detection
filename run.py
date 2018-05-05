@@ -60,13 +60,16 @@ parallelizable_feature_map = {
 
 unparallelizable_feature_map = {
     'komaki_lda_5': features.category_vector.KomakiLDA5,
+    'komaki_lda_10_ip': features.category_vector.KomakiLDA10_Ip,
     'komaki_lda_5_no_device': features.category_vector.KomakiLDA5NoDevice,
     'komaki_lda_10_no_device_1': features.category_vector.KomakiLDA10NoDevice_1,
     'komaki_lda_10_no_device_2': features.category_vector.KomakiLDA10NoDevice_2,
+    'komaki_lda_20_ip': features.category_vector.KomakiLDA20_Ip,
     'komaki_lda_20_no_device_ip': features.category_vector.KomakiLDA20NoDevice_Ip,
     'komaki_lda_20_no_device_os': features.category_vector.KomakiLDA20NoDevice_Os,
     'komaki_lda_20_no_device_channel': features.category_vector.KomakiLDA20NoDevice_Channel,
     'komaki_lda_20_no_device_app': features.category_vector.KomakiLDA20NoDevice_App,
+    'komaki_lda_30_ip': features.category_vector.KomakiLDA30_Ip,
     'komaki_pca_5': features.category_vector.KomakiPCA5,
     'komaki_pca_5_no_device': features.category_vector.KomakiPCA5NoDevice,
     'komaki_nmf_5': features.category_vector.KomakiNMF5,

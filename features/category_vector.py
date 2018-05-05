@@ -160,7 +160,8 @@ class KomakiLDA20NoDevice_Ip(OneVsOneCoOccurrenceLatentVector):
     def get_column_pairs(self):
         column = 'ip'
         columns = ['ip', 'app', 'os', 'channel']
-        return [(col1, col2) for col1, col2 in itertools.product(columns, repeat=2) if col1 == column and col2 != column]
+        return [(col1, col2) for col1, col2 in itertools.product(columns, repeat=2) if
+                col1 == column and col2 != column]
 
     def transformer_factory(self):
         return LatentDirichletAllocation(n_components=self.width, learning_method='online', random_state=71)
@@ -168,6 +169,60 @@ class KomakiLDA20NoDevice_Ip(OneVsOneCoOccurrenceLatentVector):
     @property
     def width(self) -> int:
         return 20
+
+    def vectorizer_factory(self):
+        return CountVectorizer(min_df=1, dtype=np.int32)
+
+
+class KomakiLDA10_Ip(OneVsOneCoOccurrenceLatentVector):
+    def get_column_pairs(self):
+        column = 'ip'
+        columns = ['ip', 'app', 'os', 'channel', 'device']
+        return [(col1, col2) for col1, col2 in itertools.product(columns, repeat=2) if
+                col1 == column and col2 != column]
+
+    def transformer_factory(self):
+        return LatentDirichletAllocation(n_components=self.width, learning_method='online', random_state=71)
+
+    @property
+    def width(self) -> int:
+        return 10
+
+    def vectorizer_factory(self):
+        return CountVectorizer(min_df=1, dtype=np.int32)
+
+
+class KomakiLDA20_Ip(OneVsOneCoOccurrenceLatentVector):
+    def get_column_pairs(self):
+        column = 'ip'
+        columns = ['ip', 'app', 'os', 'channel', 'device']
+        return [(col1, col2) for col1, col2 in itertools.product(columns, repeat=2) if
+                col1 == column and col2 != column]
+
+    def transformer_factory(self):
+        return LatentDirichletAllocation(n_components=self.width, learning_method='online', random_state=71)
+
+    @property
+    def width(self) -> int:
+        return 20
+
+    def vectorizer_factory(self):
+        return CountVectorizer(min_df=1, dtype=np.int32)
+
+
+class KomakiLDA30_Ip(OneVsOneCoOccurrenceLatentVector):
+    def get_column_pairs(self):
+        column = 'ip'
+        columns = ['ip', 'app', 'os', 'channel', 'device']
+        return [(col1, col2) for col1, col2 in itertools.product(columns, repeat=2) if
+                col1 == column and col2 != column]
+
+    def transformer_factory(self):
+        return LatentDirichletAllocation(n_components=self.width, learning_method='online', random_state=71)
+
+    @property
+    def width(self) -> int:
+        return 30
 
     def vectorizer_factory(self):
         return CountVectorizer(min_df=1, dtype=np.int32)
