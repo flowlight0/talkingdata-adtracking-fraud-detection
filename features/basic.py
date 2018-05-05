@@ -15,6 +15,18 @@ class Ip(FeatherFeatureDF):
         return df_train[['ip']], df_test[['ip']]
 
 
+class IpForFiltering(FeatherFeatureDF):
+    @staticmethod
+    def categorical_features():
+        return ['ip_for_filtering']
+
+    def create_features_from_dataframe(self, df_train: pd.DataFrame, df_test: pd.DataFrame):
+        column = 'ip_for_filtering'
+        df_train[column] = df_train['ip']
+        df_test[column] = df_test['ip']
+        return df_train[[column]], df_test[[column]]
+
+
 class App(FeatherFeatureDF):
     @staticmethod
     def categorical_features():

@@ -17,12 +17,13 @@ import features.time_series_click
 import features.category_vector
 from features import Feature
 from features.basic import Ip, App, Os, Device, Channel, ClickHour, BasicCount, IsAttributed, ClickSecond, ClickMinute, \
-    ClickTime, ZeroMinute, DuplicatedRowIndexDiff
+    ClickTime, ZeroMinute, DuplicatedRowIndexDiff, IpForFiltering
 from models import LightGBM, Model
 from utils import dump_json_log, simple_timer
 
 parallelizable_feature_map = {
     'ip': Ip,
+    'ip_for_filtering': IpForFiltering,
     'app': App,
     'os': Os,
     'device': Device,
@@ -80,6 +81,12 @@ unparallelizable_feature_map = {
     "user_item_lda_30": features.category_vector.UserItemLDA,
     "item_user_lda_30": features.category_vector.ItemUserLDA,
 }
+
+# These features are used only for filtering data and not used for training models
+filtering_features = [
+    'click_time',
+    'ip_for_filtering'
+]
 
 models = {
     'lightgbm': LightGBM
@@ -161,7 +168,7 @@ def get_parallelizable_feature_list(config) -> List[str]:
         assert feature in parallelizable_feature_map or feature in unparallelizable_feature_map, \
             "Unknown feature {}".format(feature)
     features = [feature for feature in config['features'] if feature in parallelizable_feature_map]
-    return [*features, target_variable, 'click_time']
+    return [*features, target_variable, *filtering_features]
 
 
 def get_unparallelizable_feature_list(config) -> List[str]:
@@ -254,11 +261,19 @@ def main():
         start_time = time.time()
         with simple_timer("Load train features"):
             sampled_all_train = load_train_dataset(sampled_train_feature_paths)
+            if config.get('only_test_ips', False):
+                print("Only rows with ip <= 126413 are used for training")
+                assert 'ip_for_filtering' in sampled_all_train.columns
+                print('Sampled train size (before ip filtering) = {}'.format(len(sampled_all_train)))
+                sampled_all_train = sampled_all_train[sampled_all_train['ip_for_filtering'] <= 126413]
+                print('Sampled train size (after ip filtering) = {}'.format(len(sampled_all_train)))
 
         # Hard-coded threshold, last one day of training dataset is used for validation
         threshold = pd.Timestamp('2017-11-08 16:00:00')
-        sampled_train_data = sampled_all_train[sampled_all_train.click_time < threshold].drop('click_time', axis=1)
-        sampled_valid_data = sampled_all_train[sampled_all_train.click_time >= threshold].drop('click_time', axis=1)
+        sampled_train_data = \
+            sampled_all_train[sampled_all_train.click_time < threshold].drop(filtering_features, axis=1)
+        sampled_valid_data = \
+            sampled_all_train[sampled_all_train.click_time >= threshold].drop(filtering_features, axis=1)
 
         sampled_train_data_weight = None
         sampled_train_data_all_weight = None
@@ -286,7 +301,7 @@ def main():
         best_iteration = booster.best_iteration
         if not options.train_only:
             with simple_timer("Train model without validation"):
-                booster = model.train_without_validation(train=sampled_all_train.drop('click_time', axis=1),
+                booster = model.train_without_validation(train=sampled_all_train.drop(filtering_features, axis=1),
                                                          weight=sampled_train_data_all_weight,
                                                          categorical_features=categorical_features,
                                                          target=target_variable,
