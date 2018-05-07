@@ -268,8 +268,13 @@ def main():
                 sampled_all_train = sampled_all_train[sampled_all_train['ip_for_filtering'] <= 126413]
                 print('Sampled train size (after ip filtering) = {}'.format(len(sampled_all_train)))
 
-        # Hard-coded threshold, last one day of training dataset is used for validation
-        threshold = pd.Timestamp('2017-11-08 16:00:00')
+        if config.get("v2_validation", False):
+            print("V2 Validation")
+            threshold = pd.Timestamp('2017-11-09 04:00:00')
+        else:
+            # Hard-coded threshold, last one day of training dataset is used for validation
+            threshold = pd.Timestamp('2017-11-08 16:00:00')
+
         sampled_train_data = \
             sampled_all_train[sampled_all_train.click_time < threshold].drop(filtering_features, axis=1)
         sampled_valid_data = \
@@ -385,7 +390,7 @@ def prepare_submission(options, prediction_boosters: List, predictors: List[str]
         pred_column = 'pred-{}'.format(i)
         rank_column = 'rank-{}'.format(i)
         submission[pred_column] = prediction
-        submission[rank_column] =  submission[pred_column].rank()
+        submission[rank_column] = submission[pred_column].rank()
         pred_columns.append(pred_column)
         rank_columns.append(rank_column)
 
@@ -397,6 +402,7 @@ def prepare_submission(options, prediction_boosters: List, predictors: List[str]
     submission_path = os.path.join(os.path.dirname(__file__), output_directory,
                                    os.path.basename(options.config) + '.submission.csv')
     submission[['click_id', target_variable]].sort_values(by='click_id').to_csv(submission_path, index=False)
+
 
 if __name__ == "__main__":
     main()
