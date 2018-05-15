@@ -30,17 +30,4 @@ fi;
 
 eval $(docker-machine env ${docker_host_name})
 
-if [ -z ACCESS_TOKEN ]; then
-    echo "ACCESS_TOKEN must have access token for https://github.com/flowlight0/talkingdata-adtracking-fraud-detection";
-    exit 1;
-fi;
-
-if [ -z JUPYTER_PASSWORD_HASH ]; then
-    echo "JUPYTER_PASSWORD_HASH must have password hash generated from \"from IPython.lib import passwd; passwd()\"";
-    exit 1;
-fi;
-echo ${JUPYTER_PASSWORD_HASH}
-docker build . \
-     --build-arg ACCESS_TOKEN=${ACCESS_TOKEN} \
-     --build-arg JUPYTER_PASSWORD_HASH=${JUPYTER_PASSWORD_HASH} \
-     -t kaggle/flowlight
+docker build . -t kaggle/flowlight
