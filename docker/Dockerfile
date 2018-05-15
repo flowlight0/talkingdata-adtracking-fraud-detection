@@ -1,7 +1,7 @@
 FROM kaggle/python
 
 WORKDIR /root/
-RUN git clone https://${ACCESS_TOKEN}:x-oauth-basic@github.com/flowlight0/talkingdata-adtracking-fraud-detection.git
+RUN git clone https://github.com/flowlight0/talkingdata-adtracking-fraud-detection.git
 
 WORKDIR /root/talkingdata-adtracking-fraud-detection
 RUN apt-get install awscli -y

@@ -5,10 +5,12 @@ Disclaimer: I did not care quality/readability of code in this repository, and t
 
 ### Setup
 Since this repository assumes all the experiments are conducted on a Docker container on an AWS docker host created by docker-machine, you need to create a docker host and image before experiments.
-* You can create a docker host by running a script `docker/docker_generate.sh` (If you haven't installed docker-machine in your computer, please download before running this script). This scripts also create a docker image `kaggle/flowlight`, which contains some extra libraries in addition to `kaggle/python`.
-You are expected to start running a container with this image by running the following command: 
+* **(Caution: If you run the command in this section, it will automatically create a Docker host in an AWS EC2 spot instance. if you don't want to create it, please skip this section and create your own environment by your self)** 
+You can create a docker host by running a script `docker/docker_generate.sh` (If you haven't installed docker-machine in your computer, please download before running this script). This scripts also create a docker image `kaggle/flowlight`, which contains some extra libraries in addition to `kaggle/python`.
+You are expected to start running a container with this image by running the following commands:
+  * `eval $(docker-machine env talkingdata)` 
   * `docker run -it kaggle/flowlight bash`
-* After logging into a container, you need to download datasets from Kaggle (If you wonder how you can get these files in a remote server, it's a good opportunity to learn [kaggle-api](https://github.com/Kaggle/kaggle-api]).
+* After logging into a container, you need to download datasets from Kaggle (If you wonder how you can get these files in a remote server, it's a good opportunity to learn [kaggle-api](https://github.com/Kaggle/kaggle-api])).
   * train.csv
   * test.csv
   * test_supplement.csv

@@ -21,8 +21,8 @@ else
         --amazonec2-ami ami-ea4eae8c \
         --amazonec2-region ap-northeast-1  \
         --amazonec2-zone a  \
-        --amazonec2-root-size 512 \
-        --amazonec2-instance-type r3.4xlarge \
+        --amazonec2-root-size 1024 \
+        --amazonec2-instance-type r3.8xlarge \
         --amazonec2-request-spot-instance \
         --amazonec2-spot-price 1.28 \
         ${docker_host_name} || exit 1;
