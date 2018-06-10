@@ -12,12 +12,17 @@ function host_exists() {
     fi;
 }
 
+if [ -z ${AWS_VPC_ID} ]; then
+    echo "Please set AWS_VPC_ID when running this script";
+    exit -1
+fi
+
 if host_exists; then
     echo "Docker host \"${docker_host_name}\" already exists";
 else
     echo "Create docker host \"${docker_host_name}\"";
     docker-machine create --driver amazonec2 \
-        --amazonec2-vpc-id vpc-5eac2b3b \
+        --amazonec2-vpc-id ${AWS_VPC_ID} \
         --amazonec2-ami ami-ea4eae8c \
         --amazonec2-region ap-northeast-1  \
         --amazonec2-zone a  \
