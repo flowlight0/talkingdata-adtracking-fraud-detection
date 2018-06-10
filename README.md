@@ -1,6 +1,8 @@
 # talkingdata-adtracking-fraud-detection
 flowlight side of 1st place solution for TalkingData AdTracking Fraud Detection Challenge (https://www.kaggle.com/c/talkingdata-adtracking-fraud-detection/)
 
+Please see https://www.kaggle.com/c/talkingdata-adtracking-fraud-detection/discussion/56475 or https://www.slideshare.net/TakanoriHayashi3/talkingdata-adtracking-fraud-detection-challenge-1st-place-solution (in Japanese) if you want to know the overview of our solution. 
+
 Disclaimer: I did not care quality/readability of code in this repository, and the following documentation may contain errata.  
 
 ### Setup
